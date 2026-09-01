@@ -1,0 +1,25 @@
+---
+import { SITE_TITLE, NAV } from '../consts';
+
+const base = import.meta.env.BASE_URL;
+const here = Astro.url.pathname.replace(/\/$/, '') || '/';
+const norm = (h: string) => (base.replace(/\/$/, '') + h).replace(/\/$/, '') || '/';
+---
+
+<header class="site-header">
+	<div class="wrap bar">
+		<a class="mark" href={base}>{SITE_TITLE}</a>
+		<nav>
+			{
+				NAV.map((item) => (
+					<a
+						href={item.href.startsWith('http') ? item.href : norm(item.href)}
+						aria-current={norm(item.href) === here ? 'page' : undefined}
+					>
+						{item.label}
+					</a>
+				))
+			}
+		</nav>
+	</div>
+</header>

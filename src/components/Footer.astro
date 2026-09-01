@@ -1,0 +1,11 @@
+---
+import { EDITOR, FOUNDED } from '../consts';
+const year = new Date().getFullYear();
+const span = year === FOUNDED ? `${FOUNDED}` : `${FOUNDED}–${year}`;
+---
+
+<footer class="site-footer wrap">
+	<span>© {span} {EDITOR}</span>
+	<span>Set with <a href="https://github.com/chenglou/pretext">pretext</a> · no browser text layout</span>
+	<span>Printed in fluorescent pink &amp; blue</span>
+</footer>

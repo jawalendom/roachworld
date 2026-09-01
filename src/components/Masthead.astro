@@ -1,0 +1,51 @@
+---
+interface Props {
+	text: string;
+	subtitle?: string;
+	ratio?: number;
+}
+const { text, subtitle, ratio = 0.3 } = Astro.props;
+---
+
+<div class="masthead">
+	<canvas
+		class="masthead-canvas"
+		data-masthead
+		data-text={text}
+		data-subtitle={subtitle}
+		data-ratio={String(ratio)}
+		role="img"
+		aria-label={text}></canvas>
+	<h1 class="masthead-fallback">{text}</h1>
+</div>
+
+<style>
+	.masthead {
+		width: 100%;
+		border-block: 3px solid var(--ink);
+		padding: 0.5rem 0 0.2rem;
+	}
+	.masthead-canvas {
+		display: block;
+		width: 100%;
+	}
+	/* Shown until the script paints, and if JS is off. */
+	.masthead-fallback {
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: clamp(2.5rem, 13vw, 9rem);
+		text-align: center;
+		margin: 0;
+		letter-spacing: -0.02em;
+	}
+	.masthead:has(canvas[data-painted]) .masthead-fallback {
+		display: none;
+	}
+</style>
+
+<script>
+	import { mountMasthead } from '../lib/pretext/mountMasthead';
+	document.querySelectorAll<HTMLCanvasElement>('canvas[data-masthead]').forEach((c) => {
+		mountMasthead(c);
+	});
+</script>
