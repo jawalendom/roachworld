@@ -2,9 +2,10 @@
 interface Props {
 	text: string;
 	subtitle?: string;
+	note?: string;
 	ratio?: number;
 }
-const { text, subtitle, ratio = 0.3 } = Astro.props;
+const { text, subtitle, note, ratio = 0.3 } = Astro.props;
 ---
 
 <div class="masthead">
@@ -17,10 +18,26 @@ const { text, subtitle, ratio = 0.3 } = Astro.props;
 		role="img"
 		aria-label={text}></canvas>
 	<h1 class="masthead-fallback">{text}</h1>
+	{
+		note && (
+			<span class="masthead-annot">
+				<canvas class="mn-ring" data-note-ring data-note={note} aria-hidden="true" />
+				<span class="masthead-note">
+					{note.split('\n').map((line, i) => (
+						<>
+							{i > 0 && <br />}
+							{line}
+						</>
+					))}
+				</span>
+			</span>
+		)
+	}
 </div>
 
 <style>
 	.masthead {
+		position: relative;
 		width: 100%;
 		border-block: 3px solid var(--ink);
 		padding: 0.5rem 0 0.2rem;
@@ -29,6 +46,32 @@ const { text, subtitle, ratio = 0.3 } = Astro.props;
 	.masthead-canvas {
 		display: block;
 		width: 100%;
+	}
+	.masthead-annot {
+		position: absolute;
+		right: clamp(0.9rem, 5vw, 5.5rem);
+		bottom: clamp(0.9rem, 4vw, 3.2rem);
+		transform: rotate(-3deg);
+		transform-origin: bottom right;
+		pointer-events: none;
+	}
+	.masthead-note {
+		position: relative;
+		z-index: 1;
+		display: inline-block;
+		font-family: var(--font-hand), 'Bradley Hand', cursive;
+		font-size: clamp(0.62rem, 3.4vw, 1.6rem);
+		font-weight: 700;
+		line-height: 1.12;
+		text-align: right;
+		color: var(--blue);
+		white-space: nowrap;
+	}
+	.mn-ring {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
 	}
 	/* Shown until the script paints, and if JS is off. */
 	.masthead-fallback {
@@ -47,7 +90,11 @@ const { text, subtitle, ratio = 0.3 } = Astro.props;
 
 <script>
 	import { mountMasthead } from '../lib/pretext/mountMasthead';
+	import { mountNoteRing } from '../lib/pretext/mountNoteRing';
 	document.querySelectorAll<HTMLCanvasElement>('canvas[data-masthead]').forEach((c) => {
 		mountMasthead(c);
+	});
+	document.querySelectorAll<HTMLCanvasElement>('canvas[data-note-ring]').forEach((c) => {
+		mountNoteRing(c);
 	});
 </script>

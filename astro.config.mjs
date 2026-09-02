@@ -43,5 +43,13 @@ export default defineConfig({
 			styles: ['normal', 'italic'],
 			fallbacks: ['ui-monospace', 'monospace'],
 		},
+		{
+			// The scrawl — handwritten margin notes.
+			provider: fontProviders.google(),
+			name: 'Caveat',
+			cssVariable: '--font-hand',
+			weights: [400, 700],
+			fallbacks: ['ui-serif', 'cursive'],
+		},
 	],
 });

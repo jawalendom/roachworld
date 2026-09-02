@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Masthead from '../components/Masthead.astro';
 import IssueScroll from '../components/IssueScroll.astro';
 import { getIssues } from '../lib/issues';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import { SITE_TITLE, SITE_DESCRIPTION, EDITOR } from '../consts';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const issues = await getIssues();
@@ -12,7 +12,11 @@ const older = issues.length - 1;
 ---
 
 <Layout title={SITE_TITLE} description={SITE_DESCRIPTION} wide>
-	<Masthead text="ROACHWORLD" subtitle="A digital magazine" />
+	<Masthead
+		text="ROACHWORLD"
+		subtitle={`A digital magazine by ${EDITOR}`}
+		note={'*all words\n100% human generated'}
+	/>
 
 	{
 		latest ? (

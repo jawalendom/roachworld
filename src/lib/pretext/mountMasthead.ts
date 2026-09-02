@@ -60,6 +60,7 @@ export function mountMasthead(canvas: HTMLCanvasElement) {
 	let baseline = 0;
 	let cx = 0;
 	let fullW = 0;
+	let mobile = false;
 	let glyphs: { ch: string; x: number; w: number }[] = [];
 	let bg: HTMLCanvasElement | null = null;
 
@@ -116,17 +117,21 @@ export function mountMasthead(canvas: HTMLCanvasElement) {
 	function fit() {
 		const parent = canvas.parentElement!;
 		W = Math.max(240, Math.round(parent.clientWidth));
-		H = Math.max(120, Math.round(W * ratio));
+		// Taller panel on narrow screens so the wordmark + two-line sub-line + the
+		// circled note all have room.
+		const effRatio = W < 480 ? 0.68 : W < 760 ? 0.44 : ratio;
+		H = Math.max(120, Math.round(W * effRatio));
+		mobile = W < 480;
 
 		const REF = 100;
 		const natRef = measureNaturalWidth(
 			prepareWithSegments(text, FONT.display(REF), { letterSpacing: -REF * 0.02 }),
 		);
-		size = Math.min(((W * 0.9) / natRef) * REF, H * 0.52);
+		size = Math.min(((W * 0.92) / natRef) * REF, H * (mobile ? 0.34 : 0.52));
 		const ls = -size * 0.02;
 		fullW = measureNaturalWidth(prepareWithSegments(text, FONT.display(size), { letterSpacing: ls }));
 		cx = W / 2;
-		baseline = Math.round(H * 0.62);
+		baseline = Math.round(H * (mobile ? 0.42 : 0.62));
 
 		glyphs = [];
 		const chars = [...text];
@@ -205,15 +210,39 @@ export function mountMasthead(canvas: HTMLCanvasElement) {
 
 	function drawSubtitle(amp: number) {
 		if (!subtitle) return;
-		const px = Math.max(10, size * 0.075);
+		// "A DIGITAL MAGAZINE BY JORDAN WALENDOM" → two lines, breaking at BY.
+		const m = subtitle.match(/^(.*?)\s+(BY\s+.*)$/i);
+		const lines = m ? [m[1], m[2]] : [subtitle];
+
+		let px = Math.max(9, size * (mobile ? 0.11 : 0.075));
+		let track = mobile ? 1.5 : 4;
+
+		// Shrink to fit the panel width (pretext measures the longer line).
+		const maxLine = () =>
+			Math.max(
+				...lines.map(
+					(l) =>
+						measureNaturalWidth(prepareWithSegments(l, FONT.kicker(px), { letterSpacing: track })),
+				),
+			);
+		const cap = W * 0.94;
+		for (let i = 0; i < 6 && maxLine() > cap; i++) {
+			px *= cap / maxLine();
+			track *= 0.85;
+		}
+
 		ctx.save();
 		ctx.font = FONT.kicker(px);
-		if (canTrack) (ctx as any).letterSpacing = '4px';
+		if (canTrack) (ctx as any).letterSpacing = `${track}px`;
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'alphabetic';
 		ctx.fillStyle = M_BLACK;
 		ctx.globalAlpha = amp > 4 && chance(0.3) ? 0.25 : 1;
-		ctx.fillText(subtitle, cx + (Math.random() - 0.5) * amp, baseline + size * 0.26);
+		let sy = baseline + (mobile ? H * 0.16 : size * 0.36);
+		for (const line of lines) {
+			ctx.fillText(line, cx + (Math.random() - 0.5) * amp, sy);
+			sy += px * 1.9;
+		}
 		ctx.restore();
 		if (canTrack) (ctx as any).letterSpacing = '0px';
 	}
