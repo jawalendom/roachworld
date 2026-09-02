@@ -1,0 +1,32 @@
+---
+import { render } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import Issue from '../../../components/Issue.astro';
+import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
+
+export async function getStaticPaths() {
+	const issues = await getIssues();
+	return issues.flatMap((issue) =>
+		issue.articles.map((article) => ({
+			params: { number: issue.dir, slug: articleSlug(article) },
+			props: { issue, article },
+		})),
+	);
+}
+
+const { issue, article } = Astro.props;
+const { Content } = await render(article);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<Layout title={article.data.title} description={article.data.dek} image={article.data.heroImage} wide>
+	<Issue
+		{...article.data}
+		issueNumber={issue.data.number}
+		order={articleOrder(article)}
+		issueHref={`${base}/issues/${issue.dir}/`}
+		issueTitle={issue.data.title}
+	>
+		<Content />
+	</Issue>
+</Layout>

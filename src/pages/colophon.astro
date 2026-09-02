@@ -9,15 +9,22 @@ import { SITE_TITLE, EDITOR } from '../consts';
 
 	<div class="prose">
 		<p>
-			<strong>{SITE_TITLE}</strong> is a personal journal and magazine by {EDITOR}. Every
-			issue is written in Markdown and published as a static site.
+			<strong>{SITE_TITLE}</strong> is a personal digital magazine by {EDITOR}. Every issue
+			is written in Markdown and published as a static site.
 		</p>
 
+		<h2>Reading an issue</h2>
+		<p>
+			An issue is one long page — every article in it, stacked, divided by a heavy rule
+			and a numbered masthead. A floating <em>Index</em> in the corner opens a full-screen
+			table of contents; pick a piece and it scrolls you there. The archive keeps the
+			back issues.
+		</p>
 		<h2>The typesetting</h2>
 		<p>
-			The reading experience has two modes. The default is plain semantic HTML — fast,
-			searchable, and readable by anything. Switch to <em>magazine</em> mode and the same
-			text is re-set onto a <code>&lt;canvas&gt;</code> by{' '}
+			Each article also has its own page, and there it offers a second mode. The default
+			is plain semantic HTML. Switch to <em>magazine</em> and the same text is re-set onto
+			a <code>&lt;canvas&gt;</code> by{' '}
 			<a href="https://github.com/chenglou/pretext">pretext</a>, a text-measurement and
 			line-breaking library that does its own layout instead of relying on the browser.
 		</p>
@@ -31,10 +38,10 @@ import { SITE_TITLE, EDITOR } from '../consts';
 
 		<h2>The look</h2>
 		<p>
-			Printed — on screen — in two spot inks, fluorescent pink and medium blue, over
-			black on newsprint. Every ink is drawn on its own layer and stamped back slightly
-			out of register, the way a Risograph misaligns its drums. There is a grain plate
-			on top. Photographs are reduced to a single ink.
+			Printed — on screen — in two spot inks, acid yellow and medium blue, over black on
+			newsprint. Each ink is drawn on its own layer and stamped back slightly out of
+			register, the way a Risograph misaligns its drums. There is a grain plate on top.
+			Photographs are reduced to a single ink.
 		</p>
 		<p>
 			Display type is <strong>Syne</strong>; body is <strong>Space Grotesk</strong>;
@@ -44,7 +51,7 @@ import { SITE_TITLE, EDITOR } from '../consts';
 		<h2>Colours</h2>
 		<ul class="swatches">
 			<li style="--c:#F2EDE0">Newsprint · #F2EDE0</li>
-			<li style="--c:#FF4D9E">Fluoro pink · #FF4D9E</li>
+			<li style="--c:#FFEC4D">Acid yellow · #FFEC4D</li>
 			<li style="--c:#0E5AD6">Medium blue · #0E5AD6</li>
 			<li style="--c:#22201C">Black · #22201C</li>
 		</ul>
@@ -63,8 +70,11 @@ import { SITE_TITLE, EDITOR } from '../consts';
 	}
 	.prose h2 {
 		margin-top: 2.2em;
-		color: var(--pink);
+		color: var(--ink);
 		font-size: 1.4rem;
+		width: fit-content;
+		padding: 0.05em 0.15em;
+		background: linear-gradient(var(--pink), var(--pink)) 0 100% / 100% 0.4em no-repeat;
 	}
 	.prose p {
 		margin: 0 0 1.2em;

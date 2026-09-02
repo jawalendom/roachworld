@@ -1,0 +1,46 @@
+---
+interface Props {
+	n: string;
+	label?: string;
+}
+const { n, label = '' } = Astro.props;
+---
+
+<span class="article-no">
+	<canvas class="article-no-canvas" data-article-number data-n={n} data-label={label}></canvas>
+	<span class="article-no-fallback" aria-hidden="true">{n}</span>
+	<span class="sr-only">Article {n}{label ? `, ${label}` : ''}</span>
+</span>
+
+<style>
+	.article-no {
+		display: block;
+		position: relative;
+	}
+	.article-no-canvas {
+		display: block;
+		width: 100%;
+	}
+	.article-no-canvas:not([data-ready]) {
+		visibility: hidden;
+	}
+	.article-no-fallback {
+		position: absolute;
+		inset: 0;
+		font-family: var(--font-mono);
+		font-weight: 700;
+		font-size: clamp(1.6rem, 4vw, 2.6rem);
+		line-height: 1;
+		color: var(--ink);
+	}
+	.article-no-canvas[data-ready] + .article-no-fallback {
+		display: none;
+	}
+</style>
+
+<script>
+	import { mountArticleNumber } from '../lib/pretext/mountArticleNumber';
+	document
+		.querySelectorAll<HTMLCanvasElement>('canvas[data-article-number]')
+		.forEach((c) => mountArticleNumber(c));
+</script>

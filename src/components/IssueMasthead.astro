@@ -1,0 +1,60 @@
+---
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	number: number;
+	title: string;
+	date: Date;
+	blurb?: string;
+	label?: string;
+}
+const { number, title, date, blurb, label = 'Issue' } = Astro.props;
+---
+
+<header class="issue-masthead">
+	<p class="issue-no">{label} No. {String(number).padStart(2, '0')}</p>
+	<h1 class="issue-title">{title}</h1>
+	<p class="issue-date"><FormattedDate date={date} /></p>
+	{blurb && <p class="issue-blurb">{blurb}</p>}
+</header>
+
+<style>
+	.issue-masthead {
+		padding: clamp(2rem, 6vw, 4.5rem) 0 clamp(1.5rem, 4vw, 3rem);
+		max-width: 48rem;
+	}
+	.issue-no {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.28em;
+		text-transform: uppercase;
+		color: var(--blue);
+		margin: 0 0 0.8rem;
+	}
+	.issue-title {
+		font-family: var(--font-display);
+		font-weight: 800;
+		text-transform: uppercase;
+		font-size: clamp(2.4rem, 8vw, 4.6rem);
+		line-height: 0.96;
+		letter-spacing: -0.01em;
+		margin: 0;
+		overflow-wrap: normal;
+		hyphens: auto;
+	}
+	.issue-date {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		margin: 1.2rem 0 0;
+	}
+	.issue-blurb {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+		line-height: 1.3;
+		margin: 1.4rem 0 0;
+	}
+</style>

@@ -1,0 +1,54 @@
+---
+import { render } from 'astro:content';
+import IssueMasthead from './IssueMasthead.astro';
+import ArticleBlock from './ArticleBlock.astro';
+import IssueIndex from './IssueIndex.astro';
+import { articleSlug, articleOrder, type Issue } from '../lib/issues';
+
+interface Props {
+	issue: Issue;
+	label?: string;
+}
+const { issue, label } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const articles = await Promise.all(
+	issue.articles.map(async (a) => {
+		const { Content } = await render(a);
+		return { data: a.data, slug: articleSlug(a), order: articleOrder(a), Content };
+	}),
+);
+const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, anchor: a.slug }));
+---
+
+<div class="issue-scroll">
+	<IssueMasthead
+		number={issue.data.number}
+		title={issue.data.title}
+		date={issue.data.date}
+		blurb={issue.data.blurb}
+		label={label}
+	/>
+
+	{
+		articles.map(({ Content, ...a }) => (
+			<ArticleBlock
+				anchor={a.slug}
+				order={a.order}
+				deepHref={`${base}/issues/${issue.dir}/${a.slug}/`}
+				title={a.data.title}
+				dek={a.data.dek}
+				kicker={a.data.kicker}
+				byline={a.data.byline}
+				pubDate={a.data.pubDate}
+				updatedDate={a.data.updatedDate}
+				heroImage={a.data.heroImage}
+				tags={a.data.tags}
+			>
+				<Content />
+			</ArticleBlock>
+		))
+	}
+</div>
+
+<IssueIndex issueTitle={issue.data.title} issueNo={issue.data.number} items={indexItems} />

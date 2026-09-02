@@ -1,178 +1,48 @@
 ---
-import { getCollection } from 'astro:content';
-import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import Masthead from '../components/Masthead.astro';
-import FormattedDate from '../components/FormattedDate.astro';
+import IssueScroll from '../components/IssueScroll.astro';
+import { getIssues } from '../lib/issues';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const entries = (await getCollection('journal', ({ data }) => !data.draft)).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
-const [feature, ...rest] = entries;
+const issues = await getIssues();
+const latest = issues[0];
+const older = issues.length - 1;
 ---
 
 <Layout title={SITE_TITLE} description={SITE_DESCRIPTION} wide>
-	<Masthead text="ROACHWORLD" subtitle="A journal & magazine" />
-
-	<p class="dateline">
-		{
-			feature && (
-				<>
-					No. {String(feature.data.issue).padStart(2, '0')} ·{' '}
-					<FormattedDate date={feature.data.pubDate} /> ·{' '}
-				</>
-			)
-		}
-		Typeset in the browser with <a href="https://github.com/chenglou/pretext">pretext</a>
-	</p>
+	<Masthead text="ROACHWORLD" subtitle="A digital magazine" />
 
 	{
-		feature && (
-			<a
-				class:list={['feature', { 'no-img': !feature.data.heroImage }]}
-				href={`${base}/journal/${feature.id}/`}
-			>
-				{feature.data.heroImage && (
-					<Image
-						class="feature-img"
-						src={feature.data.heroImage}
-						alt=""
-						width={1200}
-						height={720}
-					/>
+		latest ? (
+			<>
+				<IssueScroll issue={latest} label="The latest issue" />
+				{older > 0 && (
+					<p class="more">
+						<a href={`${base}/archive/`}>
+							{older} older issue{older === 1 ? '' : 's'} in the archive →
+						</a>
+					</p>
 				)}
-				<div class="feature-text">
-					<p class="kicker">{feature.data.kicker}</p>
-					<h2>{feature.data.title}</h2>
-					<p class="feature-dek">{feature.data.dek}</p>
-					<span class="read">Read the issue →</span>
-				</div>
-			</a>
-		)
-	}
-
-	{
-		rest.length > 0 && (
-			<section class="contents">
-				<h2 class="contents-head">Also in this run</h2>
-				<ol>
-					{rest.map((e) => (
-						<li>
-							<a href={`${base}/journal/${e.id}/`}>
-								<span class="no">{String(e.data.issue).padStart(2, '0')}</span>
-								<span class="ti">{e.data.title}</span>
-								<span class="de">{e.data.dek}</span>
-							</a>
-						</li>
-					))}
-				</ol>
-			</section>
+			</>
+		) : (
+			<p class="empty">No issues yet.</p>
 		)
 	}
 </Layout>
 
 <style>
-	.dateline {
-		font-family: var(--font-mono);
-		font-size: 0.76rem;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		text-align: center;
-		margin: 1rem 0 2.5rem;
-	}
-	.feature {
-		display: grid;
-		grid-template-columns: 1.1fr 1fr;
-		gap: 2rem;
-		align-items: center;
-		background: none;
-		border: 3px solid var(--ink);
-		padding: 1.5rem;
-		box-shadow: 10px 10px 0 var(--blue);
-	}
-	.feature:hover {
-		color: inherit;
-		box-shadow: 10px 10px 0 var(--pink);
-	}
-	.feature.no-img {
-		grid-template-columns: 1fr;
-	}
-	.feature.no-img .feature-img {
-		display: none;
-	}
-	.feature-img {
-		width: 100%;
-		height: 100%;
-		max-height: 420px;
-		object-fit: cover;
-		border: 2px solid var(--ink);
-		filter: grayscale(1) contrast(1.2);
-	}
-	.feature h2 {
-		font-size: clamp(2rem, 5vw, 3.6rem);
-		margin: 0.3em 0;
-	}
-	.feature-dek {
-		font-family: var(--font-display);
-		font-weight: 600;
-		font-size: 1.15rem;
-		line-height: 1.3;
-	}
-	.read {
+	.more {
+		margin: 3rem 0 0;
+		padding-top: 1.5rem;
+		border-top: 3px solid var(--ink);
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
-		color: var(--pink);
 	}
-	.contents {
-		margin-top: 4rem;
-	}
-	.contents-head {
-		font-size: 1.1rem;
-		border-bottom: 3px solid var(--ink);
-		padding-bottom: 0.4rem;
-	}
-	.contents ol {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-	.contents li {
-		border-bottom: 2px solid var(--hairline);
-	}
-	.contents li a {
-		display: grid;
-		grid-template-columns: 3rem 1fr;
-		gap: 0.3rem 1.2rem;
-		padding: 1rem 0;
-		background: none;
-	}
-	.contents li a:hover {
-		color: inherit;
-		background: var(--paper-2);
-	}
-	.contents .no {
+	.empty {
 		font-family: var(--font-mono);
-		color: var(--blue);
-	}
-	.contents .ti {
-		font-family: var(--font-display);
-		font-weight: 700;
-		text-transform: uppercase;
-		font-size: 1.2rem;
-	}
-	.contents .de {
-		grid-column: 2;
-		font-size: 0.92rem;
-		color: var(--ink);
-		opacity: 0.8;
-	}
-	@media (max-width: 720px) {
-		.feature {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>

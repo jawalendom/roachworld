@@ -4,12 +4,12 @@
 
 :root {
 	--paper: #f2ede0;
-	--ink: #22201c;
-	--pink: #ff4d9e;
-	--blue: #0e5ad6;
+	--ink: #807d66;
+	--pink: #ffec4d;
+	--blue: #4d5fff;
 
 	--paper-2: #e9e2d0;
-	--hairline: #22201c;
+	--hairline: #807d66;
 
 	/* --font-display / --font-body / --font-mono are provided by Astro's <Font>
 	   component (see astro.config.mjs). Do not redefine them here — the canvas
@@ -25,7 +25,7 @@
 		--paper-2: #1f1c14;
 		--ink: #ede6d4;
 		--hairline: #6f6a58;
-		--pink: #ff5ea6;
+		--pink: #ffe45a;
 		--blue: #5a93ff;
 	}
 }
@@ -66,14 +66,14 @@ a {
 	color: inherit;
 	text-decoration: none;
 	background-image: linear-gradient(var(--pink), var(--pink));
-	background-size: 100% 2px;
+	background-size: 100% 0.32em;
 	background-repeat: no-repeat;
 	background-position: 0 100%;
 	transition: background-size 0.15s ease;
 }
 a:hover {
 	background-size: 100% 100%;
-	color: var(--paper);
+	color: var(--ink);
 }
 
 h1,
@@ -193,6 +193,75 @@ kbd {
 .rule-pink {
 	border: none;
 	border-top: 3px solid var(--pink);
+}
+
+/* ── Prose ──────────────────────────────────────────────────────────────── */
+.prose {
+	max-width: var(--measure);
+	font-size: 1.08rem;
+	line-height: 1.7;
+}
+.prose > p {
+	margin: 0 0 1.25em;
+}
+.prose h2,
+.prose h3 {
+	margin: 2.2em 0 0.6em;
+	color: var(--ink);
+	font-size: 1.4rem;
+	width: fit-content;
+	max-width: 100%;
+	padding: 0.05em 0.15em;
+	background: linear-gradient(var(--pink), var(--pink)) 0 100% / 100% 0.4em no-repeat;
+}
+.prose blockquote {
+	margin: 1.9em 0;
+	padding-left: 1.1em;
+	border-left: 4px solid var(--blue);
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: 1.55rem;
+	line-height: 1.24;
+	color: var(--blue);
+}
+.prose blockquote p {
+	margin: 0;
+}
+.prose blockquote cite {
+	display: block;
+	margin-top: 0.5em;
+	font: 0.7rem/1.4 var(--font-mono);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--gray-dark, currentColor);
+	font-style: normal;
+}
+.prose ul,
+.prose ol {
+	margin: 0 0 1.25em;
+	padding-left: 1.3em;
+}
+.prose li {
+	margin: 0 0 0.55em;
+}
+.prose figure {
+	margin: 2.2em 0;
+}
+.prose figure.wide {
+	width: min(100%, 1100px);
+	max-width: none;
+	margin-left: 50%;
+	transform: translateX(-50%);
+}
+.prose figure img {
+	border: 2px solid var(--ink);
+	filter: grayscale(1) contrast(1.15);
+}
+.prose figcaption {
+	margin-top: 0.5em;
+	font: 0.72rem/1.4 var(--font-mono);
+	letter-spacing: 0.04em;
+	color: var(--blue);
 }
 
 @media (prefers-reduced-motion: reduce) {

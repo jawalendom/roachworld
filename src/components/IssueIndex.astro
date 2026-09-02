@@ -1,0 +1,241 @@
+---
+interface Item {
+	order: number;
+	title: string;
+	anchor: string;
+}
+interface Props {
+	issueTitle: string;
+	issueNo: number;
+	items: Item[];
+}
+const { issueTitle, issueNo, items } = Astro.props;
+---
+
+<div class="idx" data-issue-index>
+	<button type="button" class="idx-toggle" data-idx-toggle aria-expanded="false" aria-controls="issue-index-panel">
+		<span class="idx-count" data-idx-count>{String(items.length).padStart(2, '0')}</span>
+		<span class="idx-word">Index</span>
+	</button>
+
+	<div class="idx-panel" id="issue-index-panel" data-idx-panel hidden>
+		<div class="idx-inner">
+			<div class="idx-head">
+				<p class="idx-issue">Issue No. {String(issueNo).padStart(2, '0')} — {issueTitle}</p>
+				<button type="button" class="idx-close" data-idx-close aria-label="Close index">Close ✕</button>
+			</div>
+			<ol class="idx-list">
+				{
+					items.map((it) => (
+						<li>
+							<a href={`#${it.anchor}`} data-idx-link={it.anchor}>
+								<span class="idx-no">{String(it.order).padStart(2, '0')}</span>
+								<span class="idx-title">{it.title}</span>
+							</a>
+						</li>
+					))
+				}
+			</ol>
+		</div>
+	</div>
+</div>
+
+<style>
+	.idx-toggle {
+		position: fixed;
+		right: clamp(1rem, 3vw, 2.5rem);
+		bottom: clamp(1rem, 3vw, 2.5rem);
+		z-index: 40;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		background: var(--ink);
+		color: var(--paper);
+		border: none;
+		padding: 0.7em 1em;
+		cursor: pointer;
+		font-family: var(--font-mono);
+		text-transform: uppercase;
+		box-shadow: 5px 5px 0 var(--pink);
+		transition: box-shadow 0.12s ease, transform 0.12s ease;
+	}
+	.idx-toggle:hover {
+		box-shadow: 5px 5px 0 var(--blue);
+		transform: translate(-1px, -1px);
+	}
+	.idx-count {
+		font-size: 0.7rem;
+		letter-spacing: 0.1em;
+		color: var(--pink);
+	}
+	.idx-word {
+		font-size: 0.78rem;
+		letter-spacing: 0.16em;
+	}
+
+	.idx-panel {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		background: var(--paper);
+		overflow-y: auto;
+		animation: idx-in 0.22s ease both;
+	}
+	.idx-panel[hidden] {
+		display: none;
+	}
+	@keyframes idx-in {
+		from {
+			opacity: 0;
+			transform: translateY(1.5rem);
+		}
+	}
+	.idx-inner {
+		max-width: 1180px;
+		margin: 0 auto;
+		padding: clamp(1.5rem, 5vw, 4rem) var(--edge) 6rem;
+		min-height: 100%;
+	}
+	.idx-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 1rem;
+		border-bottom: 3px solid var(--ink);
+		padding-bottom: 1rem;
+		margin-bottom: clamp(1.5rem, 5vw, 3.5rem);
+	}
+	.idx-issue {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--blue);
+		margin: 0;
+	}
+	.idx-close {
+		background: none;
+		border: none;
+		color: var(--ink);
+		cursor: pointer;
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+	.idx-close:hover {
+		color: var(--ink);
+		background: var(--pink);
+	}
+	.idx-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		counter-reset: none;
+	}
+	.idx-list a {
+		display: grid;
+		grid-template-columns: 3.5rem 1fr;
+		gap: 0 1.5rem;
+		align-items: baseline;
+		padding: clamp(0.6rem, 2vw, 1.1rem) 0;
+		border-top: 1px solid var(--hairline);
+		background: none;
+		text-decoration: none;
+		color: var(--ink);
+	}
+	.idx-list li:last-child a {
+		border-bottom: 1px solid var(--hairline);
+	}
+	.idx-no {
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		color: var(--blue);
+	}
+	.idx-title {
+		font-family: var(--font-display);
+		font-weight: 800;
+		text-transform: uppercase;
+		font-size: clamp(1.6rem, 5vw, 3rem);
+		line-height: 1.02;
+	}
+	.idx-list a:hover,
+	.idx-list a[aria-current='true'] {
+		background: var(--pink);
+		color: var(--ink);
+		padding-left: 0.6rem;
+		padding-right: 0.6rem;
+		margin: 0 -0.6rem;
+	}
+	.idx-list a[aria-current='true'] .idx-no::after {
+		content: ' ●';
+		color: var(--ink);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.idx-panel {
+			animation: none;
+		}
+	}
+</style>
+
+<script>
+	function initIssueIndex(root: HTMLElement) {
+		const toggle = root.querySelector<HTMLButtonElement>('[data-idx-toggle]')!;
+		const panel = root.querySelector<HTMLElement>('[data-idx-panel]')!;
+		const closeBtn = root.querySelector<HTMLButtonElement>('[data-idx-close]')!;
+		const count = root.querySelector<HTMLElement>('[data-idx-count]')!;
+		const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-idx-link]'));
+		const anchors = links.map((l) => l.dataset.idxLink!);
+		const total = links.length;
+
+		const open = () => {
+			panel.hidden = false;
+			toggle.setAttribute('aria-expanded', 'true');
+			document.documentElement.style.overflow = 'hidden';
+		};
+		const close = () => {
+			panel.hidden = true;
+			toggle.setAttribute('aria-expanded', 'false');
+			document.documentElement.style.overflow = '';
+		};
+
+		toggle.addEventListener('click', () => (panel.hidden ? open() : close()));
+		closeBtn.addEventListener('click', close);
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !panel.hidden) close();
+		});
+		links.forEach((l) => {
+			l.addEventListener('click', (e) => {
+				e.preventDefault();
+				close();
+				document.getElementById(l.dataset.idxLink!)?.scrollIntoView({ behavior: 'smooth' });
+				history.replaceState(null, '', `#${l.dataset.idxLink}`);
+			});
+		});
+
+		// Scroll-spy: mark the article nearest the top of the viewport.
+		const sections = anchors
+			.map((a) => document.getElementById(a))
+			.filter((el): el is HTMLElement => !!el);
+		let current = '';
+		const spy = () => {
+			const y = window.scrollY + 120;
+			let active = sections[0]?.id ?? '';
+			for (const s of sections) if (s.offsetTop <= y) active = s.id;
+			if (active === current) return;
+			current = active;
+			const i = anchors.indexOf(active);
+			count.textContent = `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+			links.forEach((l) =>
+				l.setAttribute('aria-current', l.dataset.idxLink === active ? 'true' : 'false'),
+			);
+		};
+		window.addEventListener('scroll', spy, { passive: true });
+		spy();
+	}
+
+	document
+		.querySelectorAll<HTMLElement>('[data-issue-index]')
+		.forEach((el) => initIssueIndex(el));
+</script>

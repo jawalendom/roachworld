@@ -193,7 +193,7 @@ export function layoutMagazine(
 				y: y + theme.headingSize * 1.7 * BASELINE,
 				text: line.text,
 				font: FONT.display(theme.headingSize * 1.7),
-				ink: 'pink',
+				ink: 'black',
 			});
 			tcur = range.end;
 			y += titleLeading;
@@ -280,7 +280,7 @@ export function layoutMagazine(
 					y: y + theme.headingSize * BASELINE,
 					text: line.text,
 					font: FONT.heading(theme.headingSize),
-					ink: 'pink',
+					ink: 'black',
 					letterSpacing: 0.5,
 				});
 				cur = range.end;
@@ -468,7 +468,7 @@ export function layoutMagazine(
 				y: y + capSize * 0.72,
 				text: capChar,
 				font: FONT.dropCap(capSize),
-				ink: 'pink',
+				ink: 'blue',
 			};
 			intrusions[page].push({
 				col,

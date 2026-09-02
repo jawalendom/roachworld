@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import IssueScroll from '../../components/IssueScroll.astro';
+import { getIssues } from '../../lib/issues';
+import { SITE_TITLE } from '../../consts';
+
+export async function getStaticPaths() {
+	const issues = await getIssues();
+	return issues.map((issue) => ({
+		params: { number: issue.dir },
+		props: { issue },
+	}));
+}
+
+const { issue } = Astro.props;
+---
+
+<Layout
+	title={`No. ${String(issue.data.number).padStart(2, '0')} — ${issue.data.title}`}
+	description={issue.data.blurb ?? `Issue ${issue.data.number} of ${SITE_TITLE}.`}
+	wide
+>
+	<IssueScroll issue={issue} />
+</Layout>

@@ -1,0 +1,146 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import MagazineView from './MagazineView.astro';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	title: string;
+	dek: string;
+	kicker: string;
+	byline: string;
+	pubDate: Date;
+	updatedDate?: Date;
+	heroImage?: ImageMetadata;
+	tags: string[];
+	issueNumber?: number;
+	order?: number;
+	issueHref?: string;
+	issueTitle?: string;
+}
+const {
+	title,
+	dek,
+	kicker,
+	byline,
+	pubDate,
+	updatedDate,
+	heroImage,
+	tags,
+	issueNumber,
+	order,
+	issueHref,
+	issueTitle,
+} = Astro.props;
+const stamp =
+	issueNumber != null
+		? `${kicker} · No. ${String(issueNumber).padStart(2, '0')}${
+				order != null ? `.${String(order).padStart(2, '0')}` : ''
+			}`
+		: kicker;
+---
+
+<article class="entry">
+	{
+		issueHref && (
+			<p class="up">
+				<a href={issueHref}>← Issue No. {String(issueNumber).padStart(2, '0')}{issueTitle ? ` — ${issueTitle}` : ''}</a>
+			</p>
+		)
+	}
+
+	<MagazineView kicker={kicker} title={title} dek={dek} byline={byline}>
+		<header slot="header" class="entry-head">
+			<p class="kicker">{stamp}</p>
+			<h1>{title}</h1>
+			<p class="dek">{dek}</p>
+			<p class="byline">
+				By {byline} · <FormattedDate date={pubDate} />
+				{updatedDate && <> · updated <FormattedDate date={updatedDate} /></>}
+			</p>
+			{
+				heroImage && (
+					<figure class="hero">
+						<Image src={heroImage} alt="" width={1200} height={720} />
+					</figure>
+				)
+			}
+		</header>
+
+		<slot />
+	</MagazineView>
+
+	{
+		tags.length > 0 && (
+			<ul class="tags">
+				{tags.map((t) => (
+					<li>#{t}</li>
+				))}
+			</ul>
+		)
+	}
+</article>
+
+<style>
+	.entry {
+		margin-top: 1rem;
+	}
+	.up {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		margin: 0 0 2rem;
+	}
+	.entry-head {
+		max-width: var(--measure);
+	}
+	.entry-head h1 {
+		max-width: 15ch;
+		font-size: clamp(2.1rem, 6vw, 3.9rem);
+		margin: 0.2em 0 0.3em;
+		overflow-wrap: normal;
+		hyphens: auto;
+	}
+	.entry-head .dek {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: clamp(1.1rem, 2.6vw, 1.6rem);
+		line-height: 1.3;
+		margin: 0 0 1rem;
+	}
+	.entry-head .byline {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		margin: 0;
+	}
+	.entry-head .hero {
+		margin: 1.6rem 0 0;
+	}
+	.entry-head .hero :global(img) {
+		width: 100%;
+		height: auto;
+		border: 3px solid var(--ink);
+		box-shadow: 8px 8px 0 var(--pink);
+		filter: grayscale(1) contrast(1.15);
+	}
+	.tags {
+		list-style: none;
+		padding: 0;
+		margin: 3rem 0 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+	.tags li {
+		border: 2px solid var(--blue);
+		color: var(--blue);
+		padding: 0.2em 0.6em;
+	}
+</style>
