@@ -9,13 +9,15 @@ interface Families {
 	display: string;
 	body: string;
 	mono: string;
+	hand: string;
 }
 
 // Sensible defaults for SSR / pre-resolution; overwritten by resolveFamilies().
 const families: Families = {
-	display: 'Syne',
-	body: 'Space Grotesk',
-	mono: 'Space Mono',
+	display: "Syne",
+	body: "Space Grotesk",
+	mono: "Space Mono",
+	hand: "Caveat",
 };
 
 function firstFamily(value: string): string {
@@ -28,10 +30,12 @@ export function resolveFamilies(): void {
 	const cs = getComputedStyle(document.documentElement);
 	const d = firstFamily(cs.getPropertyValue('--font-display'));
 	const b = firstFamily(cs.getPropertyValue('--font-body'));
-	const m = firstFamily(cs.getPropertyValue('--font-mono'));
+	const m = firstFamily(cs.getPropertyValue("--font-mono"));
+	const hn = firstFamily(cs.getPropertyValue("--font-hand"));
 	if (d) families.display = d;
 	if (b) families.body = b;
 	if (m) families.mono = m;
+	if (hn) families.hand = hn;
 }
 
 // CSS `font` shorthand builders — the only font descriptors handed to pretext.
@@ -43,7 +47,10 @@ export const FONT = {
 	dropCap: (px: number) => `800 ${px}px "${families.display}"`,
 	kicker: (px: number) => `700 ${px}px "${families.mono}"`,
 	caption: (px: number) => `400 ${px}px "${families.mono}"`,
+	mono: (px: number) => `400 ${px}px "${families.mono}"`,
+	monoBold: (px: number) => `700 ${px}px "${families.mono}"`,
 	pullquote: (px: number) => `600 ${px}px "${families.display}"`,
+	hand: (px: number) => `700 ${px}px "${families.hand}"`,
 } as const;
 
 let ready: Promise<void> | null = null;
@@ -63,6 +70,7 @@ export function fontsReady(): Promise<void> {
 				document.fonts.load(`800 16px "${families.display}"`),
 				document.fonts.load(`400 16px "${families.mono}"`),
 				document.fonts.load(`700 16px "${families.mono}"`),
+				document.fonts.load(`700 16px "${families.hand}"`),
 			]);
 			await document.fonts.ready;
 			resolveFamilies();

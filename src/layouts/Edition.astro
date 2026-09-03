@@ -1,0 +1,56 @@
+---
+import type { ImageMetadata } from 'astro';
+import BaseHead from '../components/BaseHead.astro';
+import EditionChrome from '../components/EditionChrome.astro';
+import type { Issue } from '../lib/issues';
+import { SITE_TITLE } from '../consts';
+
+interface Props {
+	title: string;
+	description: string;
+	image?: ImageMetadata;
+	issue?: Issue;
+	current?: 'latest' | 'archive' | 'colophon' | null;
+}
+const { title, description, image, issue, current = null } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<!doctype html>
+<html lang="en" data-edition>
+	<head>
+		<BaseHead title={title} description={description} image={image} />
+	</head>
+	<body class="edition-body">
+		<a class="edition-home" href={base}>{SITE_TITLE}</a>
+		<EditionChrome issue={issue} current={current} />
+		<slot />
+		<style is:global>
+			html[data-edition],
+			html[data-edition] body {
+				background: #14110c;
+			}
+		</style>
+		<style>
+			.edition-body {
+				margin: 0;
+				color: #ede7d6;
+			}
+			.edition-home {
+				position: fixed;
+				top: clamp(0.8rem, 3vw, 1.5rem);
+				left: clamp(0.8rem, 3vw, 1.5rem);
+				z-index: 60;
+				font-family: var(--font-display);
+				font-weight: 800;
+				font-size: 0.8rem;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				color: #ede7d6;
+				mix-blend-mode: difference;
+				border: none;
+				background: none;
+			}
+		</style>
+	</body>
+</html>

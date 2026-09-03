@@ -2,7 +2,7 @@
 
 export const SITE_TITLE = 'ROACHWORLD';
 export const SITE_DESCRIPTION =
-	'A personal digital magazine, set with pretext — a hand-rolled canvas typesetter.';
+	'A personal digital zine, set with pretext — a hand-rolled canvas typesetter.';
 
 // Shown in the cover masthead / colophon.
 export const EDITOR = 'Jordan Walendom';

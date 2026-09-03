@@ -1,40 +1,52 @@
 ---
+import Edition from '../layouts/Edition.astro';
 import Layout from '../layouts/Layout.astro';
-import Masthead from '../components/Masthead.astro';
 import IssueScroll from '../components/IssueScroll.astro';
+import EditionToggle from '../components/EditionToggle.astro';
 import { getIssues } from '../lib/issues';
-import { SITE_TITLE, SITE_DESCRIPTION, EDITOR } from '../consts';
+import { editorFor } from '../lib/editors';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const issues = await getIssues();
 const latest = issues[0];
 const older = issues.length - 1;
+const Editor = latest ? editorFor(latest.dir) : null;
+const editorHref = latest ? `${base}/issues/${latest.dir}/` : base;
+const plainHref = latest ? `${base}/issues/${latest.dir}/plain/` : base;
 ---
 
-<Layout title={SITE_TITLE} description={SITE_DESCRIPTION} wide>
-	<Masthead
-		text="ROACHWORLD"
-		subtitle={`A digital magazine by ${EDITOR}`}
-		note={'*all words\n100% human generated'}
-	/>
-
-	{
-		latest ? (
-			<>
-				<IssueScroll issue={latest} label="The latest issue" />
-				{older > 0 && (
-					<p class="more">
-						<a href={`${base}/archive/`}>
-							{older} older issue{older === 1 ? '' : 's'} in the archive →
-						</a>
-					</p>
-				)}
-			</>
-		) : (
-			<p class="empty">No issues yet.</p>
-		)
-	}
-</Layout>
+{
+	latest && Editor ? (
+		<Edition title={SITE_TITLE} description={SITE_DESCRIPTION} issue={latest} current="latest">
+			<Editor issue={latest} />
+			<EditionToggle editorHref={editorHref} plainHref={plainHref} current="editor" />
+		</Edition>
+	) : (
+		<Layout title={SITE_TITLE} description={SITE_DESCRIPTION} wide>
+			{latest ? (
+				<>
+					<IssueScroll issue={latest} label="The latest issue" />
+					{older > 0 && (
+						<p class="more">
+							<a href={`${base}/archive/`}>
+								{older} older issue{older === 1 ? '' : 's'} in the archive →
+							</a>
+						</p>
+					)}
+				</>
+			) : (
+				<p>No issues yet.</p>
+			)}
+			<EditionToggle
+				editorHref={editorHref}
+				plainHref={plainHref}
+				current="plain"
+				hasEditor={!!Editor}
+			/>
+		</Layout>
+	)
+}
 
 <style>
 	.more {
@@ -45,8 +57,5 @@ const older = issues.length - 1;
 		font-size: 0.8rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
-	}
-	.empty {
-		font-family: var(--font-mono);
 	}
 </style>

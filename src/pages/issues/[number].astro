@@ -1,24 +1,45 @@
 ---
+import Edition from '../../layouts/Edition.astro';
 import Layout from '../../layouts/Layout.astro';
 import IssueScroll from '../../components/IssueScroll.astro';
+import EditionToggle from '../../components/EditionToggle.astro';
 import { getIssues } from '../../lib/issues';
+import { editorFor } from '../../lib/editors';
 import { SITE_TITLE } from '../../consts';
 
 export async function getStaticPaths() {
 	const issues = await getIssues();
-	return issues.map((issue) => ({
+	return issues.map((issue, i) => ({
 		params: { number: issue.dir },
-		props: { issue },
+		props: { issue, isLatest: i === 0 },
 	}));
 }
 
-const { issue } = Astro.props;
+const { issue, isLatest } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const Editor = editorFor(issue.dir);
+const no = String(issue.data.number).padStart(2, '0');
+const title = `No. ${no} — ${issue.data.title}`;
+const desc = issue.data.blurb ?? `Issue ${issue.data.number} of ${SITE_TITLE}.`;
+const editorHref = `${base}/issues/${issue.dir}/`;
+const plainHref = `${base}/issues/${issue.dir}/plain/`;
 ---
 
-<Layout
-	title={`No. ${String(issue.data.number).padStart(2, '0')} — ${issue.data.title}`}
-	description={issue.data.blurb ?? `Issue ${issue.data.number} of ${SITE_TITLE}.`}
-	wide
->
-	<IssueScroll issue={issue} />
-</Layout>
+{
+	Editor ? (
+		<Edition
+			title={title}
+			description={desc}
+			issue={issue}
+			current={isLatest ? 'latest' : null}
+		>
+			<Editor issue={issue} />
+			<EditionToggle editorHref={editorHref} plainHref={plainHref} current="editor" />
+		</Edition>
+	) : (
+		<Layout title={title} description={desc} wide>
+			<IssueScroll issue={issue} />
+			<EditionToggle editorHref={editorHref} plainHref={plainHref} current="plain" hasEditor={false} />
+		</Layout>
+	)
+}

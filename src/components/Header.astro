@@ -8,7 +8,9 @@ const norm = (h: string) => (base.replace(/\/$/, '') + h).replace(/\/$/, '') || 
 
 <header class="site-header">
 	<div class="wrap bar">
-		<a class="mark" href={base}>{SITE_TITLE}</a>
+		<a class="mark" href={base}>
+			<span>{SITE_TITLE}</span>
+		</a>
 		<nav>
 			{
 				NAV.map((item) => (
@@ -23,3 +25,10 @@ const norm = (h: string) => (base.replace(/\/$/, '') + h).replace(/\/$/, '') || 
 		</nav>
 	</div>
 </header>
+
+<style>
+	.site-header .mark {
+		display: inline-flex;
+		align-items: center;
+	}
+</style>

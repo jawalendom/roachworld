@@ -1,0 +1,395 @@
+---
+// Bespoke navigation for the editor's view: Latest / Archive / Colophon and a
+// full-screen issue Index, all drawn in the hand-made key of the immersive view
+// rather than the plain-view chrome. Palette + hand marks match src/editors/*.
+import type { Issue } from '../lib/issues';
+import { articleSlug, articleOrder } from '../lib/issues';
+
+interface Props {
+	issue?: Issue;
+	/** which nav destination is the current page */
+	current?: 'latest' | 'archive' | 'colophon' | null;
+}
+const { issue, current = null } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const items = issue
+	? issue.articles.map((a) => ({
+			order: articleOrder(a),
+			title: a.data.title,
+			slug: articleSlug(a),
+		}))
+	: [];
+const no = issue ? String(issue.data.number).padStart(2, '0') : '';
+const titleOf = issue?.data.title ?? '';
+
+// three subtly different wobbles so no two hand-lines match
+const SCRAWLS = [
+	'M1,4 C11,1 16,6 26,3 S46,1 59,4',
+	'M1,3 C9,6 18,1 28,4 S45,6 59,3',
+	'M1,4 C12,2 15,5 27,3 C39,1 47,6 59,4',
+];
+---
+
+<div class="edchrome" data-edchrome>
+	<nav class="edn" aria-label="Roachworld">
+		{
+			[
+				{ label: 'Latest', href: `${base}/`, key: 'latest' },
+				{ label: 'Archive', href: `${base}/archive/`, key: 'archive' },
+				{ label: 'Colophon', href: `${base}/colophon/`, key: 'colophon' },
+			].map((l, i) => (
+				<a
+					href={l.href}
+					aria-current={current === l.key ? 'page' : undefined}
+				>
+					{l.label}
+					<svg class="sq" viewBox="0 0 60 7" preserveAspectRatio="none" aria-hidden="true">
+						<path d={SCRAWLS[i % SCRAWLS.length]} />
+					</svg>
+				</a>
+			))
+		}
+	</nav>
+
+	{
+		issue && items.length > 0 && (
+			<>
+				<button type="button" class="edx-open" data-index-open aria-haspopup="dialog">
+					<span class="edx-no" data-index-count>
+						{String(items.length).padStart(2, '0')}
+					</span>
+					<span class="edx-word">Index</span>
+				</button>
+
+				<div class="edx-panel" data-index-panel hidden role="dialog" aria-label="Issue contents">
+					<div class="edx-inner">
+						<p class="edx-kick">
+							Issue No. {no} — {titleOf}
+						</p>
+
+						<ol class="edx-list">
+							{items.map((it) => (
+								<li>
+									<a href={`#${it.slug}`} data-jump={it.slug}>
+										<span class="edx-i">{String(it.order).padStart(2, '0')}</span>
+										<span class="edx-t">
+											{it.title}
+											<svg class="sq sq-lg" viewBox="0 0 60 7" preserveAspectRatio="none" aria-hidden="true">
+												<path d={SCRAWLS[it.order % SCRAWLS.length]} />
+											</svg>
+										</span>
+									</a>
+								</li>
+							))}
+						</ol>
+
+						<div class="edx-foot">
+							<a href={`${base}/archive/`}>Archive →</a>
+							<a href={`${base}/colophon/`}>Colophon</a>
+							<button type="button" data-index-close>
+								Close ✕
+							</button>
+						</div>
+					</div>
+				</div>
+			</>
+		)
+	}
+</div>
+
+<style>
+	.edchrome {
+		--ed-ground: #14110c;
+		--ed-ink: #ede7d6;
+		--ed-dim: #8a8272;
+		--ed-yellow: #ffec4d;
+		--ed-blue: #4d5fff;
+	}
+
+	/* ── top-right nav ─────────────────────────────────────────── */
+	.edn {
+		position: fixed;
+		top: clamp(0.8rem, 3vw, 1.5rem);
+		right: clamp(0.8rem, 3vw, 1.5rem);
+		z-index: 60;
+		display: flex;
+		gap: clamp(0.9rem, 3vw, 1.6rem);
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+		mix-blend-mode: difference;
+	}
+	.edn a {
+		position: relative;
+		color: #fff;
+		text-decoration: none;
+		border: none;
+		background: none;
+		padding-bottom: 0.35em;
+	}
+	.edn .sq {
+		position: absolute;
+		left: -2px;
+		right: -2px;
+		bottom: 0;
+		width: calc(100% + 4px);
+		height: 6px;
+		fill: none;
+		stroke: var(--ed-yellow);
+		stroke-width: 2;
+		stroke-linecap: round;
+		opacity: 0;
+		transform: scaleX(0.2);
+		transform-origin: left;
+		transition: opacity 0.14s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+	}
+	.edn a:hover .sq,
+	.edn a:focus-visible .sq,
+	.edn a[aria-current='page'] .sq {
+		opacity: 1;
+		transform: scaleX(1);
+	}
+	.edn a[aria-current='page'] {
+		color: var(--ed-yellow);
+	}
+
+	/* ── index button ─────────────────────────────────────────── */
+	.edx-open {
+		position: fixed;
+		right: clamp(0.8rem, 3vw, 1.5rem);
+		bottom: clamp(0.8rem, 3vw, 1.5rem);
+		z-index: 60;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding: 0.55em 0.9em;
+		background: var(--ed-ground);
+		border: 1px solid var(--ed-yellow);
+		color: var(--ed-ink);
+		cursor: pointer;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+	.edx-open:hover {
+		border-color: var(--ed-blue);
+	}
+	.edx-no {
+		color: var(--ed-yellow);
+		font-size: 0.62rem;
+	}
+
+	/* ── contents panel ───────────────────────────────────────── */
+	.edx-panel {
+		position: fixed;
+		inset: 0;
+		z-index: 70;
+		background: var(--ed-ground);
+		overflow-y: auto;
+		animation: edx-in 0.22s ease both;
+	}
+	.edx-panel[hidden] {
+		display: none;
+	}
+	@keyframes edx-in {
+		from {
+			opacity: 0;
+			transform: translateY(1.2rem);
+		}
+	}
+	.edx-inner {
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: clamp(4rem, 12vh, 8rem) clamp(1.4rem, 6vw, 5rem) 5rem;
+	}
+	.edx-kick {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--ed-blue);
+		margin: 0 0 clamp(1.6rem, 5vh, 3rem);
+	}
+	.edx-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.edx-list a {
+		display: grid;
+		grid-template-columns: 3rem 1fr;
+		gap: 0 1.4rem;
+		align-items: start;
+		padding: clamp(0.7rem, 2.4vh, 1.3rem) 0;
+		border-top: 1px solid rgba(237, 231, 214, 0.16);
+		text-decoration: none;
+		background: none;
+		color: var(--ed-ink);
+	}
+	.edx-list li:last-child a {
+		border-bottom: 1px solid rgba(237, 231, 214, 0.16);
+	}
+	.edx-i {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--ed-blue);
+		padding-top: 0.5em;
+	}
+	.edx-t {
+		position: relative;
+		display: inline;
+		font-family: var(--font-display);
+		font-weight: 800;
+		text-transform: uppercase;
+		font-size: clamp(1.45rem, 6vw, 3.4rem);
+		line-height: 1.02;
+		overflow-wrap: break-word;
+		word-break: break-word;
+	}
+	.edx-t .sq-lg {
+		position: absolute;
+		left: -0.1em;
+		right: -0.1em;
+		bottom: -0.12em;
+		width: calc(100% + 0.2em);
+		height: 0.16em;
+		fill: none;
+		stroke: var(--ed-yellow);
+		stroke-width: 3;
+		stroke-linecap: round;
+		opacity: 0;
+		transform: scaleX(0.15);
+		transform-origin: left;
+		transition: opacity 0.14s ease, transform 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
+	}
+	.edx-list a:hover .sq-lg,
+	.edx-list a:focus-visible .sq-lg,
+	.edx-list a[aria-current='true'] .sq-lg {
+		opacity: 1;
+		transform: scaleX(1);
+	}
+	.edx-list a[aria-current='true'] .edx-i {
+		color: var(--ed-yellow);
+	}
+
+	.edx-foot {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.4rem;
+		margin-top: clamp(2.4rem, 7vh, 4rem);
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+	.edx-foot a,
+	.edx-foot button {
+		color: var(--ed-dim);
+		text-decoration: none;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		font: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
+	}
+	.edx-foot a:hover,
+	.edx-foot button:hover {
+		color: var(--ed-yellow);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.edx-panel {
+			animation: none;
+		}
+		.edn .sq,
+		.edx-t .sq-lg {
+			transition: opacity 0.1s linear;
+			transform: none;
+		}
+	}
+</style>
+
+<script>
+	function initEditionChrome(root: HTMLElement) {
+		const openBtn = root.querySelector<HTMLButtonElement>('[data-index-open]');
+		const panel = root.querySelector<HTMLElement>('[data-index-panel]');
+		const closeBtn = root.querySelector<HTMLButtonElement>('[data-index-close]');
+		const count = root.querySelector<HTMLElement>('[data-index-count]');
+		const jumps = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-jump]'));
+
+		const sheet = document.querySelector<HTMLElement>('[data-edition-sheet]');
+
+		// ── panel open/close ──
+		if (openBtn && panel && closeBtn) {
+			const open = () => {
+				panel.hidden = false;
+				document.documentElement.style.overflow = 'hidden';
+				closeBtn.focus();
+			};
+			const close = () => {
+				panel.hidden = true;
+				document.documentElement.style.overflow = '';
+				openBtn.focus();
+			};
+			openBtn.addEventListener('click', open);
+			closeBtn.addEventListener('click', close);
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && !panel.hidden) close();
+			});
+			jumps.forEach((a) => {
+				a.addEventListener('click', (e) => {
+					e.preventDefault();
+					const id = a.dataset.jump!;
+					close();
+					const go = (sheet as any)?.__editionScrollTo as
+						| ((id: string, smooth?: boolean) => void)
+						| undefined;
+					if (go) go(id);
+					history.replaceState(null, '', `#${id}`);
+				});
+			});
+		}
+
+		// ── scroll-spy against the sheet's registered marks ──
+		if (!sheet) return;
+		const total = jumps.length;
+		let currentId = '';
+
+		const spy = () => {
+			const marks = (sheet as any).__editionMarks as { id: string; y: number }[] | undefined;
+			if (!marks || !marks.length) return;
+			const sy = window.scrollY - sheet.offsetTop + window.innerHeight * 0.28;
+			let active = marks[0].id;
+			for (const m of marks) if (m.y <= sy) active = m.id;
+			if (active === currentId) return;
+			currentId = active;
+
+			const i = jumps.findIndex((a) => a.dataset.jump === active);
+			if (count) {
+				count.textContent =
+					i >= 0
+						? `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
+						: String(total).padStart(2, '0');
+			}
+			jumps.forEach((a) =>
+				a.setAttribute('aria-current', a.dataset.jump === active ? 'true' : 'false'),
+			);
+		};
+
+		const start = () => {
+			spy();
+			window.addEventListener('scroll', spy, { passive: true });
+		};
+		if ((sheet as any).__editionMarks) start();
+		else sheet.addEventListener('edition:built', start, { once: true });
+	}
+
+	document
+		.querySelectorAll<HTMLElement>('[data-edchrome]')
+		.forEach((el) => initEditionChrome(el));
+</script>

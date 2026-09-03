@@ -1,0 +1,60 @@
+---
+interface Props {
+	editorHref: string;
+	plainHref: string;
+	current: 'editor' | 'plain';
+	hasEditor?: boolean;
+}
+const { editorHref, plainHref, current, hasEditor = true } = Astro.props;
+---
+
+<nav class="edt" aria-label="Reading mode">
+	<a href={editorHref} aria-current={current === 'editor' ? 'true' : undefined} class:list={{ off: !hasEditor }}>
+		Editor's view
+	</a>
+	<span class="edt-sep">/</span>
+	<a href={plainHref} aria-current={current === 'plain' ? 'true' : undefined}>Plain view</a>
+</nav>
+
+<style>
+	.edt {
+		position: fixed;
+		left: clamp(0.8rem, 3vw, 1.5rem);
+		bottom: clamp(0.8rem, 3vw, 1.5rem);
+		z-index: 60;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		background: #14110c;
+		color: #8a8272;
+		border: 1px solid #4d5fff;
+		padding: 0.55em 0.8em;
+	}
+	:global(html:not([data-edition])) .edt {
+		background: var(--paper);
+		border-color: var(--blue);
+	}
+	.edt a {
+		color: inherit;
+		text-decoration: none;
+		border: none;
+		background: none;
+	}
+	.edt a[aria-current='true'] {
+		color: #4d5fff;
+	}
+	:global(html[data-edition]) .edt a[aria-current='true'] {
+		color: #ede7d6;
+	}
+	.edt a.off {
+		opacity: 0.4;
+		pointer-events: none;
+	}
+	.edt-sep {
+		opacity: 0.5;
+	}
+</style>

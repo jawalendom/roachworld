@@ -1,0 +1,31 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import IssueScroll from '../../../components/IssueScroll.astro';
+import EditionToggle from '../../../components/EditionToggle.astro';
+import { getIssues } from '../../../lib/issues';
+import { editorFor } from '../../../lib/editors';
+import { SITE_TITLE } from '../../../consts';
+
+export async function getStaticPaths() {
+	const issues = await getIssues();
+	return issues.map((issue) => ({ params: { number: issue.dir }, props: { issue } }));
+}
+
+const { issue } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const no = String(issue.data.number).padStart(2, '0');
+---
+
+<Layout
+	title={`No. ${no} — ${issue.data.title} (plain)`}
+	description={issue.data.blurb ?? `Issue ${issue.data.number} of ${SITE_TITLE}.`}
+	wide
+>
+	<IssueScroll issue={issue} />
+	<EditionToggle
+		editorHref={`${base}/issues/${issue.dir}/`}
+		plainHref={`${base}/issues/${issue.dir}/plain/`}
+		current="plain"
+		hasEditor={!!editorFor(issue.dir)}
+	/>
+</Layout>

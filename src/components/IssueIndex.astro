@@ -66,7 +66,8 @@ const { issueTitle, issueNo, items } = Astro.props;
 	.idx-count {
 		font-size: 0.7rem;
 		letter-spacing: 0.1em;
-		color: var(--pink);
+		color: var(--paper);
+		opacity: 0.7;
 	}
 	.idx-word {
 		font-size: 0.78rem;
@@ -124,7 +125,7 @@ const { issueTitle, issueNo, items } = Astro.props;
 		text-transform: uppercase;
 	}
 	.idx-close:hover {
-		color: var(--ink);
+		color: #22201c;
 		background: var(--pink);
 	}
 	.idx-list {
@@ -156,20 +157,33 @@ const { issueTitle, issueNo, items } = Astro.props;
 		font-family: var(--font-display);
 		font-weight: 800;
 		text-transform: uppercase;
-		font-size: clamp(1.6rem, 5vw, 3rem);
+		font-size: clamp(1.4rem, 6vw, 3rem);
 		line-height: 1.02;
+		overflow-wrap: break-word;
+		word-break: break-word;
 	}
 	.idx-list a:hover,
 	.idx-list a[aria-current='true'] {
 		background: var(--pink);
-		color: var(--ink);
+		color: #22201c;
 		padding-left: 0.6rem;
 		padding-right: 0.6rem;
 		margin: 0 -0.6rem;
 	}
+	.idx-list a:hover .idx-no,
+	.idx-list a[aria-current='true'] .idx-no {
+		color: #22201c;
+	}
 	.idx-list a[aria-current='true'] .idx-no::after {
 		content: ' ●';
-		color: var(--ink);
+		color: #22201c;
+	}
+
+	/* clear the reading-mode toggle (fixed, bottom-left) on narrow screens */
+	@media (max-width: 620px) {
+		.idx-toggle {
+			bottom: 3.6rem;
+		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {

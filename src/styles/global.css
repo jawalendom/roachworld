@@ -128,7 +128,7 @@ kbd {
 	justify-content: space-between;
 	flex-wrap: wrap;
 	gap: 0.35rem 1rem;
-	padding: 0.7rem 0;
+	padding: 0.7rem var(--edge); /* keep the bar aligned with the page content */
 }
 .site-header .mark {
 	font-family: var(--font-display);

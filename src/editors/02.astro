@@ -1,0 +1,198 @@
+---
+// Editor's view — Issue No. 02, "Fluorescence".
+// Art direction: warm black ground, bone ink, acid-yellow + periwinkle marks.
+// A circling, underlining, asterisking hand. Seeded off the issue title.
+import { getImage } from 'astro:assets';
+import type { Issue } from '../lib/issues';
+import { articleOrder, articleSlug } from '../lib/issues';
+import { parseBody } from '../lib/editor/parseBody';
+
+interface Props {
+	issue: Issue;
+}
+const { issue } = Astro.props;
+
+const articles = await Promise.all(
+	issue.articles.map(async (a) => {
+		const hero = a.data.heroImage
+			? await getImage({ src: a.data.heroImage, width: 900, format: 'webp' })
+			: null;
+		return {
+			order: articleOrder(a),
+			slug: articleSlug(a),
+			kicker: a.data.kicker,
+			title: a.data.title,
+			dek: a.data.dek,
+			byline: a.data.byline,
+			heroUrl: hero?.src ?? null,
+			blocks: parseBody(a.body ?? ''),
+		};
+	}),
+);
+
+const payload = {
+	no: issue.data.number,
+	title: issue.data.title,
+	blurb: issue.data.blurb ?? '',
+	date: issue.data.date.toLocaleDateString('en-us', { year: 'numeric', month: 'short', day: 'numeric' }),
+	seed: `roachworld-${issue.data.number}-${issue.data.title}`,
+	articles,
+};
+---
+
+<div class="ed-sheet" data-edition-sheet>
+	<canvas data-sheet></canvas>
+	<div data-sheet-spacer></div>
+	<script type="application/json" data-editor-data set:html={JSON.stringify(payload)} />
+</div>
+
+<style>
+	.ed-sheet {
+		position: relative;
+	}
+	.ed-sheet [data-sheet] {
+		position: sticky;
+		top: 0;
+		display: block;
+		width: 100vw;
+		height: 100vh;
+		margin-left: calc(50% - 50vw);
+	}
+	.ed-sheet[data-ready] [data-sheet] {
+		animation: ed-fade 0.4s ease both;
+	}
+	@keyframes ed-fade {
+		from {
+			opacity: 0;
+		}
+	}
+</style>
+
+<script>
+	import { mountSheet } from '../lib/editor/sheet';
+	import { seedFrom } from '../lib/editor/rng';
+	import { FONT } from '../lib/pretext/fonts';
+	import * as C from '../lib/editor/compose';
+	import { line, ellipse, strokePath, asterisk } from '../lib/editor/hand';
+
+	const root = document.querySelector<HTMLElement>('[data-edition-sheet]');
+	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
+	if (root && dataEl) {
+		const data = JSON.parse(dataEl.textContent || '{}');
+
+		const T: C.Theme = {
+			ground: '#14110c',
+			ink: '#ede7d6',
+			dim: '#8a8272',
+			accent: '#ffec4d',
+			accent2: '#4d5fff',
+			display: FONT.display,
+			body: FONT.body,
+			mono: FONT.mono,
+			hand: FONT.hand,
+		};
+
+		const MARGIN_NOTES = [
+			'keep this one',
+			'louder here?',
+			'yes — exactly',
+			'colour of old tape',
+			'the building holds',
+		];
+
+		mountSheet(
+			root,
+			(s) => {
+				// opening scatter of marks around the cover
+				s.push({
+					y: s.cursor,
+					h: s.vh,
+					reveal: s.vh * 0.9,
+					latch: false,
+					draw(ctx, p) {
+						for (let i = 0; i < 14; i++) {
+							const gx = s.rng.range(s.W * 0.02, s.W * 0.96);
+							// keep the scatter off the cover's centre band so it never
+							// reads as a stray mark through the title or blurb
+							const gy = s.rng.chance(0.5)
+								? s.rng.range(s.vh * 0.03, s.vh * 0.22)
+								: s.rng.range(s.vh * 0.62, s.vh * 0.96);
+							const kind = s.rng() ;
+							const local = Math.max(0, Math.min(1, p * 1.6 - i * 0.06));
+							if (local <= 0) continue;
+							if (kind < 0.4) {
+								strokePath(ctx, line({ x: gx, y: gy }, { x: gx + s.rng.range(20, 90), y: gy + s.rng.range(-30, 30) }, s.rng), local, {
+									color: s.rng.chance(0.5) ? T.accent : T.dim,
+									width: 1.6,
+									alpha: 0.7,
+								});
+							} else if (kind < 0.7) {
+								asterisk(ctx, gx, gy, s.rng.range(7, 16), s.rng, local, T.accent2);
+							} else {
+								const e = ellipse(gx, gy, s.rng.range(14, 34), s.rng.range(10, 24), s.rng);
+								strokePath(ctx, e, local, { color: T.dim, width: 1.4, alpha: 0.55 });
+							}
+						}
+					},
+				});
+
+				C.cover(s, T, { no: data.no, title: data.title, date: data.date, blurb: data.blurb });
+
+				s.gap(s.vh * 0.3);
+				C.contents(
+					s,
+					T,
+					data.articles.map((a: { order: number; title: string }) => ({
+						order: a.order,
+						title: a.title,
+					})),
+				);
+
+				for (const a of data.articles) {
+					s.mark(a.slug);
+					C.divider(s, T, { order: a.order, kicker: a.kicker });
+					C.headline(s, T, a.title);
+					C.dek(s, T, a.dek);
+					C.byline(s, T, `By ${a.byline}`);
+					if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
+					C.body(s, T, a.blocks);
+					if (s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
+					s.gap(s.vh * 0.12);
+				}
+
+				// colophon
+				s.mark('colophon');
+				const { x, edge } = C.contentBox(s);
+				const cy = s.cursor + s.vh * 0.1;
+				const rule = line({ x: edge, y: 0 }, { x: s.W - edge, y: 0 }, s.rng, 1);
+				s.push({
+					y: cy,
+					h: 120,
+					reveal: 1,
+					lead: 0,
+					// end-matter — drawn in full, no scroll animation, no long run-out
+					draw(ctx) {
+						strokePath(ctx, rule, 1, { color: T.accent2, width: 2 });
+						ctx.save();
+						ctx.font = T.mono(12);
+						ctx.fillStyle = T.dim;
+						(ctx as any).letterSpacing = '2px';
+						ctx.fillText('SET WITH PRETEXT · ROACHWORLD', x, 34);
+						(ctx as any).letterSpacing = '0px';
+						ctx.font = T.hand(22);
+						ctx.fillStyle = T.accent;
+						ctx.fillText('*all words 100% human generated', x, 80);
+						const e = ellipse(x + 150, 72, 190, 34, s.rng);
+						strokePath(ctx, e, 1, { color: T.accent2, width: 2 });
+						ctx.restore();
+					},
+				});
+				// end the sheet just past the colophon so it settles into the lower
+				// viewport at full scroll with no long blank run-out beneath it
+				s.cursor = cy - s.vh * 0.72;
+				s.height = s.cursor;
+			},
+			{ seed: seedFrom(data.seed), ground: T.ground },
+		);
+	}
+</script>
