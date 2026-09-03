@@ -20,8 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: withastro/action@v3
-        # If deploying a project page and `base` in astro.config.mjs is set,
-        # nothing else is needed here.
+        with:
+          node-version: 22 # Astro 7 requires Node >=22.12
 
   deploy:
     needs: build
