@@ -128,7 +128,7 @@ export function cover(
 export function contents(
 	s: Sheet,
 	t: Theme,
-	items: { order: number; title: string }[],
+	items: { order: number; title: string; slug: string }[],
 ) {
 	const { x, edge } = contentBox(s);
 	const w = Math.min(s.W - x - edge, 900);
@@ -186,6 +186,7 @@ export function contents(
 				strokePath(ctx, under, Math.max(0, (p - 0.5) * 2.4), { color: t.accent, width: 3 });
 			},
 		});
+		s.hotspot({ x, y: y - 8, w: Math.min(w, tx - x + b.width + 16), h: b.height + 24 }, it.slug);
 		s.cursor = y + b.height + 15;
 	}
 	s.cursor += s.vh * 0.12;

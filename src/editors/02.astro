@@ -142,9 +142,10 @@ const payload = {
 				C.contents(
 					s,
 					T,
-					data.articles.map((a: { order: number; title: string }) => ({
+					data.articles.map((a: { order: number; title: string; slug: string }) => ({
 						order: a.order,
 						title: a.title,
+						slug: a.slug,
 					})),
 				);
 

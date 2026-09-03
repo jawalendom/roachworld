@@ -23,6 +23,14 @@ export interface SheetMark {
 	y: number;
 }
 
+export interface SheetHotspot {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	id: string;
+}
+
 export interface Sheet {
 	readonly W: number;
 	readonly vh: number;
@@ -34,6 +42,8 @@ export interface Sheet {
 	gap(dy: number): void;
 	/** record a named scroll target at the current cursor (for the index). */
 	mark(id: string): void;
+	/** register a clickable region (sheet-content coords) that jumps to mark `id`. */
+	hotspot(rect: { x: number; y: number; w: number; h: number }, id: string): void;
 }
 
 export interface MountOpts {
@@ -57,6 +67,8 @@ export function mountSheet(
 		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	let els: SheetElement[] = [];
+	let marks: SheetMark[] = [];
+	let hotspots: SheetHotspot[] = [];
 	let W = 0;
 	let vh = 0;
 	let dpr = 1;
@@ -64,6 +76,26 @@ export function mountSheet(
 	let raf = 0;
 	let built = false;
 	let contentH = 0;
+
+	function scrollToMark(id: string, smooth = true) {
+		const m = marks.find((mk) => mk.id === id);
+		if (!m) return;
+		window.scrollTo({
+			top: root.offsetTop + m.y - 40,
+			behavior: smooth ? 'smooth' : 'auto',
+		});
+	}
+
+	function hotspotAt(clientX: number, clientY: number): SheetHotspot | null {
+		const rect = canvas.getBoundingClientRect();
+		const sy = Math.max(0, window.scrollY - root.offsetTop);
+		const x = clientX - rect.left;
+		const y = clientY - rect.top + sy;
+		for (const hs of hotspots) {
+			if (x >= hs.x && x <= hs.x + hs.w && y >= hs.y && y <= hs.y + hs.h) return hs;
+		}
+		return null;
+	}
 
 	function buildGrain() {
 		const s = 150;
@@ -93,7 +125,8 @@ export function mountSheet(
 
 	function build() {
 		size();
-		const marks: SheetMark[] = [];
+		marks = [];
+		hotspots = [];
 		const sheet: Sheet = {
 			W,
 			vh,
@@ -111,6 +144,9 @@ export function mountSheet(
 			mark(id) {
 				marks.push({ id, y: this.cursor });
 			},
+			hotspot(rect, id) {
+				hotspots.push({ ...rect, id });
+			},
 		};
 		els = [];
 		compose(sheet);
@@ -120,14 +156,7 @@ export function mountSheet(
 		built = true;
 		// expose scroll targets + a jump helper for the edition index chrome
 		(root as any).__editionMarks = marks;
-		(root as any).__editionScrollTo = (id: string, smooth = true) => {
-			const m = marks.find((mk) => mk.id === id);
-			if (!m) return;
-			window.scrollTo({
-				top: root.offsetTop + m.y - 40,
-				behavior: smooth ? 'smooth' : 'auto',
-			});
-		};
+		(root as any).__editionScrollTo = scrollToMark;
 		root.dispatchEvent(new CustomEvent('edition:built'));
 	}
 
@@ -189,6 +218,15 @@ export function mountSheet(
 		render();
 		root.dataset.ready = '';
 		window.addEventListener('scroll', onScroll, { passive: true });
+
+		// the drawn contents page is clickable — jump to the article's section
+		canvas.addEventListener('click', (e) => {
+			const hs = hotspotAt(e.clientX, e.clientY);
+			if (hs) scrollToMark(hs.id, !reduce);
+		});
+		canvas.addEventListener('pointermove', (e) => {
+			canvas.style.cursor = hotspotAt(e.clientX, e.clientY) ? 'pointer' : '';
+		});
 
 		let rt: number | undefined;
 		let lastW = window.innerWidth;
