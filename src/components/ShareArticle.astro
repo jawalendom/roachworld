@@ -55,6 +55,11 @@ const payload = {
 		<span data-share-label>Share to Story</span>
 	</button>
 
+	<p class="sha-tip" data-share-tip>
+		Adds the card to your Story. The link copies too — paste it into a
+		<span class="sha-lk">🔗</span> sticker so viewers can tap through.
+	</p>
+
 	<div class="sha-modal" data-share-modal hidden>
 		<div class="sha-sheet" role="dialog" aria-modal="true" aria-label="Share this article">
 			<button type="button" class="sha-close" data-share-close aria-label="Close">✕</button>
@@ -65,7 +70,8 @@ const payload = {
 				<a class="sha-act" data-share-x target="_blank" rel="noopener">Share on X</a>
 			</div>
 			<p class="sha-hint">
-				For Instagram: save the image, open Stories, and add it as your background.
+				Save the image and set it as your Story background, then add a 🔗 link
+				sticker — this article's link is copied, ready to paste.
 			</p>
 		</div>
 	</div>
@@ -105,6 +111,24 @@ const payload = {
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	.sha-tip {
+		max-width: 34rem;
+		margin: 0.7rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		line-height: 1.6;
+		letter-spacing: 0.02em;
+		color: var(--ink);
+		opacity: 0.68;
+	}
+	.sha-tip.is-copied {
+		opacity: 1;
+		color: var(--blue);
+	}
+	.sha-lk {
+		font-family: initial;
 	}
 
 	.sha-modal {
@@ -222,6 +246,7 @@ const payload = {
 		const saveLink = root.querySelector<HTMLAnchorElement>('[data-share-save]');
 		const copyBtn = root.querySelector<HTMLButtonElement>('[data-share-copy]');
 		const xLink = root.querySelector<HTMLAnchorElement>('[data-share-x]');
+		const tip = root.querySelector<HTMLElement>('[data-share-tip]');
 		if (!btn || !modal || !closeBtn || !img || !saveLink || !copyBtn || !xLink) return;
 
 		let payload: StoryCardData & { slug: string };
@@ -234,6 +259,29 @@ const payload = {
 		let objectUrl: string | null = null;
 		let file: File | null = null;
 		const defaultLabel = label?.textContent ?? 'Share to Story';
+		const tipDefault = tip?.innerHTML ?? '';
+		let tipTimer: number | undefined;
+
+		function markLink(copied: boolean) {
+			if (!tip) return;
+			clearTimeout(tipTimer);
+			tip.classList.add('is-copied');
+			tip.textContent = copied
+				? 'Link copied ✓  In your Story, tap the 🔗 sticker and paste it.'
+				: 'In your Story, tap the 🔗 sticker and paste this article’s link.';
+			tipTimer = window.setTimeout(() => {
+				tip.classList.remove('is-copied');
+				tip.innerHTML = tipDefault;
+			}, 9000);
+		}
+		async function copyLink(): Promise<boolean> {
+			try {
+				await navigator.clipboard.writeText(payload.url);
+				return true;
+			} catch {
+				return false;
+			}
+		}
 
 		async function ensureCard(): Promise<File | null> {
 			if (file) return file;
@@ -269,6 +317,7 @@ const payload = {
 			if (label) label.textContent = 'Building…';
 			try {
 				const f = await ensureCard();
+				const copied = await copyLink(); // preload the clipboard for the 🔗 sticker
 				if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
 					try {
 						await navigator.share({
@@ -277,12 +326,14 @@ const payload = {
 							text: `${payload.title} — roachworld`,
 							url: payload.url,
 						});
+						markLink(copied);
 						return;
 					} catch (err) {
 						if (err instanceof DOMException && err.name === 'AbortError') return;
 						// any other failure → fall back to the modal
 					}
 				}
+				markLink(copied);
 				openModal();
 			} catch (err) {
 				console.error('[share] card render failed', err);
