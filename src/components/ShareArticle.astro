@@ -1,0 +1,321 @@
+---
+// "Share to Story" control for an article. Generates a 1080×1920 card on the
+// client and hands it to the OS share sheet via the Web Share API (so a reader
+// can pick Instagram → Stories); falls back to a modal with save / copy-link /
+// X on desktop and browsers without file sharing.
+import { getImage } from 'astro:assets';
+import roachMark from '../assets/roach-mark.png';
+
+interface Props {
+	title: string;
+	byline: string;
+	kicker: string;
+	issueNumber: number;
+	order: number;
+	slug: string;
+	issueDir: string;
+	heroUrl?: string | null;
+	quote?: string | null;
+}
+const { title, byline, kicker, issueNumber, order, slug, issueDir, heroUrl, quote } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const path = `${base}/issues/${issueDir}/${slug}/`;
+const url = Astro.site ? new URL(path, Astro.site).href : path;
+const siteLabel = (Astro.site ? Astro.site.host : 'roachworld') + base;
+
+const roach = await getImage({ src: roachMark, width: 260, format: 'png' });
+
+const payload = {
+	title,
+	byline,
+	kicker,
+	issueNo: issueNumber,
+	order,
+	slug,
+	quote: quote ?? null,
+	heroUrl: heroUrl ?? null,
+	roachUrl: roach.src,
+	url,
+	siteLabel,
+};
+---
+
+<div class="sha" data-share-article data-payload={JSON.stringify(payload)}>
+	<button type="button" class="sha-btn" data-share-btn>
+		<svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+			<path
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M7 8l5-5 5 5"></path>
+		</svg>
+		<span data-share-label>Share to Story</span>
+	</button>
+
+	<div class="sha-modal" data-share-modal hidden>
+		<div class="sha-sheet" role="dialog" aria-modal="true" aria-label="Share this article">
+			<button type="button" class="sha-close" data-share-close aria-label="Close">✕</button>
+			<div class="sha-preview"><img alt="Story card preview" data-share-img /></div>
+			<div class="sha-actions">
+				<a class="sha-act" data-share-save download={`roachworld-${slug}.png`}>Save image</a>
+				<button type="button" class="sha-act" data-share-copy>Copy link</button>
+				<a class="sha-act" data-share-x target="_blank" rel="noopener">Share on X</a>
+			</div>
+			<p class="sha-hint">
+				For Instagram: save the image, open Stories, and add it as your background.
+			</p>
+		</div>
+	</div>
+</div>
+
+<style>
+	.sha {
+		margin: 1.4rem 0 0;
+	}
+	.sha-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		font-family: var(--font-mono);
+		font-size: 0.74rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--blue);
+		background: none;
+		border: 2px solid var(--blue);
+		padding: 0.5em 0.9em;
+		cursor: pointer;
+		transition: background 0.12s ease, color 0.12s ease;
+	}
+	.sha-btn:hover {
+		background: var(--blue);
+		color: var(--paper);
+	}
+	.sha-btn[data-busy] {
+		opacity: 0.6;
+		pointer-events: none;
+	}
+	.sha-btn[data-busy] svg {
+		animation: sha-spin 0.7s linear infinite;
+	}
+	@keyframes sha-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.sha-modal {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: grid;
+		place-items: center;
+		padding: 1.5rem;
+		background: rgba(20, 17, 12, 0.74);
+		animation: sha-fade 0.16s ease both;
+	}
+	.sha-modal[hidden] {
+		display: none;
+	}
+	@keyframes sha-fade {
+		from {
+			opacity: 0;
+		}
+	}
+	.sha-sheet {
+		position: relative;
+		width: 100%;
+		max-width: 400px;
+		max-height: 88vh;
+		overflow-y: auto;
+		background: var(--paper);
+		border: 3px solid var(--ink);
+		box-shadow: 10px 10px 0 var(--blue);
+		padding: 1.25rem;
+	}
+	.sha-close {
+		position: absolute;
+		top: 0.4rem;
+		right: 0.4rem;
+		background: none;
+		border: none;
+		font-family: var(--font-mono);
+		font-size: 0.9rem;
+		color: var(--ink);
+		cursor: pointer;
+		padding: 0.4rem 0.5rem;
+	}
+	.sha-close:hover {
+		color: #22201c;
+		background: var(--pink);
+	}
+	.sha-preview {
+		background: #14110c;
+		border: 2px solid var(--ink);
+		display: grid;
+		place-items: center;
+		min-height: 120px;
+	}
+	.sha-preview img {
+		display: block;
+		width: 100%;
+		max-height: 52vh;
+		object-fit: contain;
+	}
+	.sha-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+	.sha-act {
+		flex: 1 1 auto;
+		text-align: center;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink);
+		background: none;
+		border: 2px solid var(--ink);
+		padding: 0.55em 0.7em;
+		cursor: pointer;
+		text-decoration: none;
+	}
+	.sha-act:hover {
+		background: var(--pink);
+		color: #22201c;
+	}
+	.sha-hint {
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		line-height: 1.5;
+		letter-spacing: 0.03em;
+		color: var(--ink);
+		opacity: 0.7;
+		margin: 0.9rem 0 0;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sha-modal {
+			animation: none;
+		}
+		.sha-btn[data-busy] svg {
+			animation: none;
+		}
+	}
+</style>
+
+<script>
+	import { renderStoryCard, type StoryCardData } from '../lib/share/storyCard';
+
+	function initShare(root: HTMLElement) {
+		const btn = root.querySelector<HTMLButtonElement>('[data-share-btn]');
+		const label = root.querySelector<HTMLElement>('[data-share-label]');
+		const modal = root.querySelector<HTMLElement>('[data-share-modal]');
+		const sheet = root.querySelector<HTMLElement>('.sha-sheet');
+		const closeBtn = root.querySelector<HTMLButtonElement>('[data-share-close]');
+		const img = root.querySelector<HTMLImageElement>('[data-share-img]');
+		const saveLink = root.querySelector<HTMLAnchorElement>('[data-share-save]');
+		const copyBtn = root.querySelector<HTMLButtonElement>('[data-share-copy]');
+		const xLink = root.querySelector<HTMLAnchorElement>('[data-share-x]');
+		if (!btn || !modal || !closeBtn || !img || !saveLink || !copyBtn || !xLink) return;
+
+		let payload: StoryCardData & { slug: string };
+		try {
+			payload = JSON.parse(root.dataset.payload || '{}');
+		} catch {
+			return;
+		}
+
+		let objectUrl: string | null = null;
+		let file: File | null = null;
+		const defaultLabel = label?.textContent ?? 'Share to Story';
+
+		async function ensureCard(): Promise<File | null> {
+			if (file) return file;
+			const blob = await renderStoryCard(payload);
+			if (objectUrl) URL.revokeObjectURL(objectUrl);
+			objectUrl = URL.createObjectURL(blob);
+			file = new File([blob], `roachworld-${payload.slug}.png`, { type: 'image/png' });
+			return file;
+		}
+
+		function openModal() {
+			if (objectUrl) {
+				img!.src = objectUrl;
+				saveLink!.href = objectUrl;
+			}
+			xLink!.href =
+				'https://twitter.com/intent/tweet?text=' +
+				encodeURIComponent(`${payload.title} — roachworld`) +
+				'&url=' +
+				encodeURIComponent(payload.url);
+			modal!.hidden = false;
+			document.documentElement.style.overflow = 'hidden';
+			closeBtn!.focus();
+		}
+		function closeModal() {
+			modal!.hidden = true;
+			document.documentElement.style.overflow = '';
+			btn!.focus();
+		}
+
+		btn.addEventListener('click', async () => {
+			btn.dataset.busy = 'true';
+			if (label) label.textContent = 'Building…';
+			try {
+				const f = await ensureCard();
+				if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
+					try {
+						await navigator.share({
+							files: [f],
+							title: payload.title,
+							text: `${payload.title} — roachworld`,
+							url: payload.url,
+						});
+						return;
+					} catch (err) {
+						if (err instanceof DOMException && err.name === 'AbortError') return;
+						// any other failure → fall back to the modal
+					}
+				}
+				openModal();
+			} catch (err) {
+				console.error('[share] card render failed', err);
+				openModal(); // modal still offers copy-link / X without the image
+			} finally {
+				delete btn.dataset.busy;
+				if (label) label.textContent = defaultLabel;
+			}
+		});
+
+		closeBtn.addEventListener('click', closeModal);
+		modal.addEventListener('click', (e) => {
+			if (!sheet?.contains(e.target as Node)) closeModal();
+		});
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !modal.hidden) closeModal();
+		});
+
+		copyBtn.addEventListener('click', async () => {
+			try {
+				await navigator.clipboard.writeText(payload.url);
+				const was = copyBtn.textContent;
+				copyBtn.textContent = 'Copied ✓';
+				setTimeout(() => (copyBtn.textContent = was), 1600);
+			} catch {
+				copyBtn.textContent = payload.url;
+			}
+		});
+
+		window.addEventListener('pagehide', () => {
+			if (objectUrl) URL.revokeObjectURL(objectUrl);
+		});
+	}
+
+	document.querySelectorAll<HTMLElement>('[data-share-article]').forEach(initShare);
+</script>

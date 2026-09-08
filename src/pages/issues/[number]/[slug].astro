@@ -3,6 +3,7 @@ import { render } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
 import Issue from '../../../components/Issue.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
+import { parseBody } from '../../../lib/editor/parseBody';
 
 export async function getStaticPaths() {
 	const issues = await getIssues();
@@ -17,6 +18,13 @@ export async function getStaticPaths() {
 const { issue, article } = Astro.props;
 const { Content } = await render(article);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const slug = articleSlug(article);
+
+// Share-card pull quote: explicit frontmatter, else the article's first blockquote.
+const shareQuote =
+	article.data.shareQuote ??
+	parseBody(article.body ?? '').find((b) => b.type === 'pull')?.text ??
+	null;
 ---
 
 <Layout title={article.data.title} description={article.data.dek} image={article.data.heroImage} wide>
@@ -26,6 +34,9 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 		order={articleOrder(article)}
 		issueHref={`${base}/issues/${issue.dir}/`}
 		issueTitle={issue.data.title}
+		issueDir={issue.dir}
+		slug={slug}
+		shareQuote={shareQuote}
 	>
 		<Content />
 	</Issue>

@@ -29,6 +29,9 @@ const articles = defineCollection({
 			heroImage: z.optional(image()),
 			tags: z.array(z.string()).default([]),
 			draft: z.boolean().default(false),
+			// Optional line pulled onto the "Share to Story" card. Falls back to the
+			// article's first blockquote when omitted.
+			shareQuote: z.string().optional(),
 		}),
 });
 

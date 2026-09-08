@@ -1,8 +1,9 @@
 ---
 import type { ImageMetadata } from 'astro';
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import MagazineView from './MagazineView.astro';
 import FormattedDate from './FormattedDate.astro';
+import ShareArticle from './ShareArticle.astro';
 
 interface Props {
 	title: string;
@@ -17,6 +18,9 @@ interface Props {
 	order?: number;
 	issueHref?: string;
 	issueTitle?: string;
+	issueDir?: string;
+	slug?: string;
+	shareQuote?: string | null;
 }
 const {
 	title,
@@ -31,7 +35,15 @@ const {
 	order,
 	issueHref,
 	issueTitle,
+	issueDir,
+	slug,
+	shareQuote,
 } = Astro.props;
+
+const heroShare = heroImage
+	? await getImage({ src: heroImage, width: 1080, height: 1350, format: 'jpeg', quality: 82 })
+	: null;
+const canShare = issueNumber != null && order != null && issueDir && slug;
 const stamp =
 	issueNumber != null
 		? `${kicker} · No. ${String(issueNumber).padStart(2, '0')}${
@@ -58,6 +70,21 @@ const stamp =
 				By {byline} · <FormattedDate date={pubDate} />
 				{updatedDate && <> · updated <FormattedDate date={updatedDate} /></>}
 			</p>
+			{
+				canShare && (
+					<ShareArticle
+						title={title}
+						byline={byline}
+						kicker={kicker}
+						issueNumber={issueNumber!}
+						order={order!}
+						slug={slug!}
+						issueDir={issueDir!}
+						heroUrl={heroShare?.src ?? null}
+						quote={shareQuote ?? null}
+					/>
+				)
+			}
 			{
 				heroImage && (
 					<figure class="hero">
