@@ -3,6 +3,7 @@
 // hand marks). Runs entirely client-side on a canvas so it stays in sync with
 // the article and needs no build step. Returns a PNG Blob.
 
+import qrcode from 'qrcode-generator';
 import { FONT, fontsReady, resolveFamilies } from '../pretext/fonts';
 import { layoutInk, drawInk, fitInk } from '../editor/ink';
 import { line, ellipse, strokePath, asterisk, type Pt } from '../editor/hand';
@@ -117,6 +118,49 @@ function tintMark(img: HTMLImageElement, dw: number, dh: number, color: string):
 	g.fillStyle = color;
 	g.fillRect(0, 0, dw, dh);
 	return c;
+}
+
+/** A bone panel + dark QR in the lower-right, with a "scan to read" label.
+ *  Instagram gives web-shared stories no tappable link, so the QR (plus the
+ *  URL printed in the footer) is how a viewer reaches the article. */
+function drawQr(ctx: CanvasRenderingContext2D, url: string) {
+	const qr = qrcode(0, 'M');
+	qr.addData(url);
+	qr.make();
+	const n = qr.getModuleCount();
+
+	const panel = 196;
+	const quiet = 16;
+	const cell = (panel - quiet * 2) / n;
+	const x0 = W - EDGE - panel;
+	const y0 = 1520;
+
+	ctx.save();
+	ctx.fillStyle = INK;
+	ctx.fillRect(x0, y0, panel, panel);
+	ctx.fillStyle = '#14110c';
+	for (let r = 0; r < n; r++) {
+		for (let c = 0; c < n; c++) {
+			if (qr.isDark(r, c)) {
+				ctx.fillRect(
+					Math.floor(x0 + quiet + c * cell),
+					Math.floor(y0 + quiet + r * cell),
+					Math.ceil(cell),
+					Math.ceil(cell),
+				);
+			}
+		}
+	}
+	ctx.restore();
+
+	ctx.save();
+	ctx.font = FONT.mono(19);
+	ctx.fillStyle = YELLOW;
+	ctx.textAlign = 'right';
+	(ctx as any).letterSpacing = '3px';
+	ctx.fillText('SCAN TO READ', x0 + panel, y0 - 22);
+	(ctx as any).letterSpacing = '0px';
+	ctx.restore();
 }
 
 export async function renderStoryCard(d: StoryCardData): Promise<Blob> {
@@ -303,7 +347,10 @@ export async function renderStoryCard(d: StoryCardData): Promise<Blob> {
 
 	// ── footer, anchored above Instagram's send bar ──────────────────────────
 	const fy = 1636;
-	strokePath(ctx, line({ x: EDGE, y: fy }, { x: W - EDGE, y: fy }, rng, 1), 1, { color: BLUE, width: 3 });
+	strokePath(ctx, line({ x: EDGE, y: fy }, { x: W - EDGE - 236, y: fy }, rng, 1), 1, {
+		color: BLUE,
+		width: 3,
+	});
 	ctx.save();
 	ctx.font = FONT.mono(22);
 	ctx.fillStyle = DIM;
@@ -324,6 +371,10 @@ export async function renderStoryCard(d: StoryCardData): Promise<Blob> {
 		ctx.fillRect(0, 0, W, H);
 		ctx.restore();
 	}
+
+	// ── QR to the article — how a viewer gets from the story to the piece ─────
+	// drawn after the grain so the code stays crisp and scannable
+	drawQr(ctx, d.url);
 
 	return new Promise<Blob>((resolve, reject) => {
 		canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
