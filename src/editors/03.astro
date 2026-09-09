@@ -1,7 +1,8 @@
 ---
-// Editor's view — Issue No. 02, "Fluorescence".
-// Art direction: warm black ground, bone ink, acid-yellow + periwinkle marks.
-// A circling, underlining, asterisking hand. Seeded off the issue title.
+// Editor's view — Issue No. 03, "The Lull".
+// Art direction carried over from No. 02: warm black ground, bone ink,
+// acid-yellow + periwinkle marks, a circling/underlining/asterisking hand.
+// Seeded off the issue title, so the marks fall differently.
 import { getImage } from 'astro:assets';
 import type { Issue } from '../lib/issues';
 import { articleOrder, articleSlug } from '../lib/issues';
@@ -26,6 +27,7 @@ const articles = await Promise.all(
 			byline: a.data.byline,
 			heroUrl: hero?.src ?? null,
 			blocks: parseBody(a.body ?? ''),
+			filler: a.data.filler,
 		};
 	}),
 );
@@ -93,11 +95,11 @@ const payload = {
 		};
 
 		const MARGIN_NOTES = [
-			'keep this one',
-			'louder here?',
-			'yes — exactly',
-			'colour of old tape',
-			'the building holds',
+			'louder lately',
+			'this is the part',
+			'hold that',
+			'note the date',
+			'again, quieter',
 		];
 
 		mountSheet(
@@ -112,12 +114,10 @@ const payload = {
 					draw(ctx, p) {
 						for (let i = 0; i < 14; i++) {
 							const gx = s.rng.range(s.W * 0.02, s.W * 0.96);
-							// keep the scatter off the cover's centre band so it never
-							// reads as a stray mark through the title or blurb
 							const gy = s.rng.chance(0.5)
 								? s.rng.range(s.vh * 0.03, s.vh * 0.22)
 								: s.rng.range(s.vh * 0.62, s.vh * 0.96);
-							const kind = s.rng() ;
+							const kind = s.rng();
 							const local = Math.max(0, Math.min(1, p * 1.6 - i * 0.06));
 							if (local <= 0) continue;
 							if (kind < 0.4) {
@@ -151,13 +151,17 @@ const payload = {
 
 				for (const a of data.articles) {
 					s.mark(a.slug);
-					C.divider(s, T, { order: a.order, kicker: a.kicker });
+					C.divider(s, T, { order: a.order, kicker: a.filler ? 'Filler' : a.kicker });
 					C.headline(s, T, a.title);
-					C.dek(s, T, a.dek);
-					C.byline(s, T, `By ${a.byline}`);
-					if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
-					C.body(s, T, a.blocks);
-					if (s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
+					if (a.filler) {
+						C.fillerNote(s, T);
+					} else {
+						C.dek(s, T, a.dek);
+						C.byline(s, T, `By ${a.byline}`);
+						if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
+						C.body(s, T, a.blocks);
+						if (s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
+					}
 					s.gap(s.vh * 0.12);
 				}
 
@@ -171,7 +175,6 @@ const payload = {
 					h: 120,
 					reveal: 1,
 					lead: 0,
-					// end-matter — drawn in full, no scroll animation, no long run-out
 					draw(ctx) {
 						strokePath(ctx, rule, 1, { color: T.accent2, width: 2 });
 						ctx.save();
@@ -188,8 +191,6 @@ const payload = {
 						ctx.restore();
 					},
 				});
-				// end the sheet just past the colophon so it settles into the lower
-				// viewport at full scroll with no long blank run-out beneath it
 				s.cursor = cy - s.vh * 0.72;
 				s.height = s.cursor;
 			},

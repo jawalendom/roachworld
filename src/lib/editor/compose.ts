@@ -267,6 +267,31 @@ export function dek(s: Sheet, t: Theme, text: string) {
 	s.cursor = y + b.height + 12;
 }
 
+/** Placeholder for an article that hasn't been written yet — a bracketed
+ *  wireframe line where the dek / body would go. */
+export function fillerNote(s: Sheet, t: Theme) {
+	const { x, w } = contentBox(s);
+	const px = s.W < 620 ? 18 : 22;
+	const y = s.cursor + 8;
+	const rule = line({ x, y: 30 }, { x: x + Math.min(w, 260), y: 30 }, s.rng, 0.6);
+	s.push({
+		y,
+		h: 60,
+		reveal: s.vh * 0.35,
+		draw(ctx, p) {
+			ctx.save();
+			ctx.font = t.mono(px);
+			ctx.fillStyle = t.dim;
+			(ctx as any).letterSpacing = '2px';
+			ctx.fillText('[  WORDS TO COME  ]', x, px);
+			(ctx as any).letterSpacing = '0px';
+			ctx.restore();
+			strokePath(ctx, rule, Math.max(0, (p - 0.3) * 1.8), { color: t.dim, width: 1.5, alpha: 0.6 });
+		},
+	});
+	s.cursor = y + 66;
+}
+
 export function byline(s: Sheet, t: Theme, text: string) {
 	const { x } = contentBox(s);
 	const y = s.cursor;

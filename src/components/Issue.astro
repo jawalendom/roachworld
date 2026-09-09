@@ -21,6 +21,7 @@ interface Props {
 	issueDir?: string;
 	slug?: string;
 	shareQuote?: string | null;
+	filler?: boolean;
 }
 const {
 	title,
@@ -38,12 +39,14 @@ const {
 	issueDir,
 	slug,
 	shareQuote,
+	filler = false,
 } = Astro.props;
 
-const heroShare = heroImage
-	? await getImage({ src: heroImage, width: 1080, height: 1350, format: 'jpeg', quality: 82 })
-	: null;
-const canShare = issueNumber != null && order != null && issueDir && slug;
+const heroShare =
+	heroImage && !filler
+		? await getImage({ src: heroImage, width: 1080, height: 1350, format: 'jpeg', quality: 82 })
+		: null;
+const canShare = !filler && issueNumber != null && order != null && issueDir && slug;
 const stamp =
 	issueNumber != null
 		? `${kicker} · No. ${String(issueNumber).padStart(2, '0')}${
@@ -94,7 +97,7 @@ const stamp =
 			}
 		</header>
 
-		<slot />
+		{filler ? <p class="entry-filler">[&nbsp;&nbsp;words to come&nbsp;&nbsp;]</p> : <slot />}
 	</MagazineView>
 
 	{
@@ -121,6 +124,18 @@ const stamp =
 	}
 	.entry-head {
 		max-width: var(--measure);
+	}
+	.entry-filler {
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--ink);
+		opacity: 0.45;
+		margin: 2.5rem 0;
+		padding: 1.4rem 0;
+		border-top: 1px solid var(--hairline);
+		border-bottom: 1px solid var(--hairline);
 	}
 	.entry-head h1 {
 		max-width: 15ch;

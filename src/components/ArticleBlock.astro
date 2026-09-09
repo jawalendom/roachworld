@@ -16,9 +16,22 @@ interface Props {
 	updatedDate?: Date;
 	heroImage?: ImageMetadata;
 	tags: string[];
+	filler?: boolean;
 }
-const { anchor, order, deepHref, title, dek, kicker, byline, pubDate, updatedDate, heroImage, tags } =
-	Astro.props;
+const {
+	anchor,
+	order,
+	deepHref,
+	title,
+	dek,
+	kicker,
+	byline,
+	pubDate,
+	updatedDate,
+	heroImage,
+	tags,
+	filler = false,
+} = Astro.props;
 const no = String(order).padStart(2, '0');
 const ORDINALS = [
 	'',
@@ -50,22 +63,33 @@ const ordinal = ORDINALS[order] ?? `No. ${order}`;
 			<p class="byline">
 				By {byline} · <FormattedDate date={pubDate} />
 				{updatedDate && <> · updated <FormattedDate date={updatedDate} /></>}
-				· <a href={deepHref}>read as a spread →</a>
+				{!filler && (
+					<>
+						{' · '}
+						<a href={deepHref}>read as a spread →</a>
+					</>
+				)}
 			</p>
 		</div>
 	</div>
 
 	{
-		heroImage && (
+		!filler && heroImage && (
 			<figure class="hero">
 				<Image src={heroImage} alt="" width={1400} height={840} />
 			</figure>
 		)
 	}
 
-	<div class="prose">
-		<slot />
-	</div>
+	{
+		filler ? (
+			<p class="article-filler">[&nbsp;&nbsp;words to come&nbsp;&nbsp;]</p>
+		) : (
+			<div class="prose">
+				<slot />
+			</div>
+		)
+	}
 
 	{
 		tags.length > 0 && (
@@ -99,6 +123,17 @@ const ordinal = ORDINALS[order] ?? `No. ${order}`;
 		max-width: 40rem;
 		min-width: 0; /* let the grid cell shrink below the title's longest word */
 		padding-top: 0.1rem;
+	}
+	.article-filler {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--ink);
+		opacity: 0.4;
+		margin: 1.5rem 0 0;
+		padding: 1.2rem 0;
+		border-top: 1px solid var(--hairline);
 	}
 	.article-headline .kicker {
 		display: block;
