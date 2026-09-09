@@ -35,6 +35,8 @@ const articles = defineCollection({
 			// Optional line pulled onto the "Share to Story" card. Falls back to the
 			// article's first blockquote when omitted.
 			shareQuote: z.string().optional(),
+			// Optional hand-scrawled note in the editor view's margin for this piece.
+			marginNote: z.string().optional(),
 		}),
 });
 

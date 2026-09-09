@@ -486,16 +486,16 @@ export function figure(s: Sheet, t: Theme, d: { url: string; caption?: string })
 export function marginNote(s: Sheet, t: Theme, text: string) {
 	const { x, w } = contentBox(s);
 	const px = 17;
-	const b = layoutInk(text, t.hand(px), 180, px * 1.05, 0, 0);
+	const b = layoutInk(text, t.hand(px), 210, px * 1.08, 0, 0);
 	const y = s.cursor - s.vh * 0.15;
 	const rot = s.rng.range(-0.09, 0.09);
 	const nx = x + w + 24;
 	s.push({
 		y,
-		h: 10,
+		h: b.height + 20,
 		reveal: s.vh * 0.4,
 		draw(ctx, p) {
-			if (nx + 190 > s.W) return;
+			if (nx + 220 > s.W) return;
 			ctx.save();
 			ctx.translate(nx, 0);
 			ctx.rotate(rot);
