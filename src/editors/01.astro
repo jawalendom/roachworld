@@ -1,7 +1,8 @@
 ---
 // Editor's view — Issue No. 01, "Erosion".
-// Art direction: warm black ground, bone ink, acid-yellow + periwinkle marks,
-// a circling/underlining/asterisking hand. Seeded off the issue title.
+// Art direction: near-black terminal ground, cold white, acid green + glitch
+// red. Machine-drawn — straight rules, registration brackets, RGB channel
+// split, decode-style reveals, scanlines. Seeded off the issue title.
 import { getImage } from 'astro:assets';
 import type { Issue } from '../lib/issues';
 import { articleOrder, articleSlug } from '../lib/issues';
@@ -45,6 +46,7 @@ const payload = {
 <div class="ed-sheet" data-edition-sheet>
 	<canvas data-sheet></canvas>
 	<div data-sheet-spacer></div>
+	<div class="ed-scan" aria-hidden="true"></div>
 	<script type="application/json" data-editor-data set:html={JSON.stringify(payload)} />
 </div>
 
@@ -61,11 +63,46 @@ const payload = {
 		margin-left: calc(50% - 50vw);
 	}
 	.ed-sheet[data-ready] [data-sheet] {
-		animation: ed-fade 0.4s ease both;
+		animation: ed-fade 0.35s steps(3) both;
 	}
 	@keyframes ed-fade {
 		from {
 			opacity: 0;
+		}
+	}
+	.ed-scan {
+		position: fixed;
+		inset: 0;
+		z-index: 5;
+		pointer-events: none;
+		background: repeating-linear-gradient(
+			to bottom,
+			rgba(0, 0, 0, 0) 0,
+			rgba(0, 0, 0, 0) 2px,
+			rgba(0, 0, 0, 0.24) 3px
+		);
+		animation: ed-flicker 5s steps(1) infinite;
+	}
+	@keyframes ed-flicker {
+		0%,
+		94%,
+		100% {
+			opacity: 1;
+		}
+		95% {
+			opacity: 0.7;
+		}
+		96% {
+			opacity: 1;
+		}
+		97% {
+			opacity: 0.85;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ed-sheet[data-ready] [data-sheet],
+		.ed-scan {
+			animation: none;
 		}
 	}
 </style>
@@ -75,7 +112,7 @@ const payload = {
 	import { seedFrom } from '../lib/editor/rng';
 	import { FONT } from '../lib/pretext/fonts';
 	import * as C from '../lib/editor/compose';
-	import { line, ellipse, strokePath, asterisk } from '../lib/editor/hand';
+	import { rule, crosshair, noiseBlocks } from '../lib/editor/glitch';
 
 	const root = document.querySelector<HTMLElement>('[data-edition-sheet]');
 	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
@@ -83,55 +120,48 @@ const payload = {
 		const data = JSON.parse(dataEl.textContent || '{}');
 
 		const T: C.Theme = {
-			ground: '#14110c',
-			ink: '#ede7d6',
-			dim: '#8a8272',
-			accent: '#ffec4d',
-			accent2: '#4d5fff',
+			ground: '#050506',
+			ink: '#e6e6e9',
+			dim: '#5f6068',
+			accent: '#00ff9c',
+			accent2: '#ff2e4d',
 			display: FONT.display,
 			body: FONT.body,
 			mono: FONT.mono,
 			hand: FONT.hand,
 		};
+		const CYAN = '#13e8ff';
 
-		const MARGIN_NOTES = [
-			'louder lately',
-			'this is the part',
-			'note the date',
-			'again, quieter',
-		];
+		const MARGIN_NOTES = ['flag this', 'signal ↑', 'ref: date', 'attenuating'];
 
 		mountSheet(
 			root,
 			(s) => {
-				// opening scatter of marks around the cover
+				// opening scatter — hard fragments, kept to the margins / dead space
 				s.push({
 					y: s.cursor,
 					h: s.vh,
 					reveal: s.vh * 0.9,
 					latch: false,
 					draw(ctx, p) {
-						for (let i = 0; i < 14; i++) {
-							const gx = s.rng.range(s.W * 0.02, s.W * 0.96);
+						const cols = [T.accent, T.accent2, CYAN, T.dim];
+						for (let i = 0; i < 12; i++) {
+							const left = s.rng.chance(0.5);
+							const gx = left ? s.rng.range(14, 66) : s.rng.range(s.W - 66, s.W - 14);
 							const gy = s.rng.chance(0.5)
 								? s.rng.range(s.vh * 0.03, s.vh * 0.22)
-								: s.rng.range(s.vh * 0.62, s.vh * 0.96);
-							const kind = s.rng();
-							const local = Math.max(0, Math.min(1, p * 1.6 - i * 0.06));
+								: s.rng.range(s.vh * 0.6, s.vh * 0.96);
+							const local = Math.max(0, Math.min(1, p * 1.7 - i * 0.05));
 							if (local <= 0) continue;
-							if (kind < 0.4) {
-								strokePath(ctx, line({ x: gx, y: gy }, { x: gx + s.rng.range(20, 90), y: gy + s.rng.range(-30, 30) }, s.rng), local, {
-									color: s.rng.chance(0.5) ? T.accent : T.dim,
-									width: 1.6,
-									alpha: 0.7,
-								});
-							} else if (kind < 0.7) {
-								asterisk(ctx, gx, gy, s.rng.range(7, 16), s.rng, local, T.accent2);
+							const col = cols[s.rng.int(0, 3)];
+							if (s.rng.chance(0.5)) {
+								crosshair(ctx, gx, gy, s.rng.range(6, 14), local, { color: col, width: 1.4, alpha: 0.85 });
 							} else {
-								const e = ellipse(gx, gy, s.rng.range(14, 34), s.rng.range(10, 24), s.rng);
-								strokePath(ctx, e, local, { color: T.dim, width: 1.4, alpha: 0.55 });
+								rule(ctx, gx, gy, gx + s.rng.range(-26, 26), gy, local, { color: col, width: 2, alpha: 0.7 });
 							}
 						}
+						noiseBlocks(ctx, 0, s.vh * 0.03, s.W, s.vh * 0.2, s.rng, 9, cols, p);
+						noiseBlocks(ctx, 0, s.vh * 0.62, s.W, s.vh * 0.34, s.rng, 9, cols, p);
 					},
 				});
 
@@ -165,29 +195,30 @@ const payload = {
 					s.gap(s.vh * 0.12);
 				}
 
-				// colophon
+				// colophon — end-of-transmission readout
 				s.mark('colophon');
 				const { x, edge } = C.contentBox(s);
 				const cy = s.cursor + s.vh * 0.1;
-				const rule = line({ x: edge, y: 0 }, { x: s.W - edge, y: 0 }, s.rng, 1);
 				s.push({
 					y: cy,
-					h: 120,
+					h: 140,
 					reveal: 1,
 					lead: 0,
 					draw(ctx) {
-						strokePath(ctx, rule, 1, { color: T.accent2, width: 2 });
+						rule(ctx, edge, 0, s.W - edge, 0, 1, { color: T.accent, width: 2 });
 						ctx.save();
-						ctx.font = T.mono(12);
-						ctx.fillStyle = T.dim;
+						ctx.textBaseline = 'alphabetic';
 						(ctx as any).letterSpacing = '2px';
-						ctx.fillText('SET WITH PRETEXT · ROACHWORLD', x, 34);
-						(ctx as any).letterSpacing = '0px';
-						ctx.font = T.hand(22);
+						ctx.font = T.mono(12);
 						ctx.fillStyle = T.accent;
-						ctx.fillText('*all words 100% human generated', x, 80);
-						const e = ellipse(x + 150, 72, 190, 34, s.rng);
-						strokePath(ctx, e, 1, { color: T.accent2, width: 2 });
+						ctx.fillText('> TRANSMISSION COMPLETE', x, 34);
+						ctx.fillStyle = T.dim;
+						ctx.fillText('  SET WITH PRETEXT // NO BROWSER TEXT LAYOUT', x, 60);
+						ctx.fillStyle = T.ink;
+						ctx.fillText('  *ALL WORDS 100% HUMAN GENERATED', x, 86);
+						ctx.fillStyle = T.dim;
+						ctx.fillText('  [ EOF ] █', x, 116);
+						(ctx as any).letterSpacing = '0px';
 						ctx.restore();
 					},
 				});

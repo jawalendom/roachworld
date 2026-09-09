@@ -63,37 +63,96 @@ function measureLineWidth(text: string, font: string, ls: number) {
 }
 
 /** Draw an InkBlock up to `progress` of its characters. */
+export interface DrawInkStyle {
+	font: string;
+	color: string;
+	alpha?: number;
+	letterSpacing?: number;
+	/** RGB channel-split offset in px (fades as progress → 1). */
+	split?: number;
+	/** colours for the two split channels [under, over]. */
+	splitColors?: [string, string];
+	/** per-line vertical jitter in px (fades as progress → 1). */
+	jitter?: number;
+	/** show a few scrambled glyphs at the decoding edge + a block cursor. */
+	scramble?: boolean;
+}
+
+const CURSOR = '█';
+const NOISE = '01<>/\\[]{}#%*+=~|:.';
+const jy = (v: number) => {
+	const x = Math.sin(v * 91.7 + 3.3) * 43758.5453;
+	return x - Math.floor(x); // [0, 1)
+};
+
+function paintPass(
+	ctx: CanvasRenderingContext2D,
+	block: InkBlock,
+	progress: number,
+	style: DrawInkStyle,
+	ox: number,
+	oy: number,
+	scramble: boolean,
+) {
+	const budgetTotal = progress * block.totalChars;
+	let used = 0;
+	const jit = style.jitter ? style.jitter * (1 - progress) : 0;
+	for (const line of block.lines) {
+		if (used >= budgetTotal && progress < 1) break;
+		const remaining = budgetTotal - used;
+		const dy = jit ? (jy(line.y) - 0.5) * 2 * jit : 0;
+		let text: string;
+		if (remaining >= line.chars) {
+			text = line.text;
+		} else {
+			const n = Math.max(0, Math.floor(remaining));
+			text = [...line.text].slice(0, n).join('');
+			if (scramble && n < line.chars) {
+				let g = '';
+				for (let i = 0; i < Math.min(3, line.chars - n); i++) g += NOISE[(Math.random() * NOISE.length) | 0];
+				text += g + CURSOR;
+			}
+		}
+		ctx.fillText(text, line.x + ox, line.y + oy + dy);
+		used += line.chars;
+	}
+}
+
 export function drawInk(
 	ctx: CanvasRenderingContext2D,
 	block: InkBlock,
 	progress: number,
-	style: { font: string; color: string; alpha?: number; letterSpacing?: number },
+	style: DrawInkStyle,
 ) {
 	if (progress <= 0) return;
-	const budgetTotal = progress * block.totalChars;
-	let used = 0;
 	ctx.save();
 	ctx.font = style.font;
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'alphabetic';
-	ctx.fillStyle = style.color;
-	ctx.globalAlpha = style.alpha ?? 1;
 	if (style.letterSpacing != null) {
 		try {
 			(ctx as any).letterSpacing = `${style.letterSpacing}px`;
 		} catch {}
 	}
-	for (const line of block.lines) {
-		if (used >= budgetTotal) break;
-		const remaining = budgetTotal - used;
-		if (remaining >= line.chars) {
-			ctx.fillText(line.text, line.x, line.y);
-		} else {
-			const n = Math.max(0, Math.floor(remaining));
-			ctx.fillText([...line.text].slice(0, n).join(''), line.x, line.y);
-		}
-		used += line.chars;
+
+	const scramble = !!style.scramble && progress < 1;
+	const split = style.split ? style.split * (0.3 + (1 - progress) * 1.7) : 0;
+	if (split > 0.4) {
+		const [c1, c2] = style.splitColors ?? ['#ff2e4d', '#12e8ff'];
+		ctx.save();
+		ctx.globalCompositeOperation = 'lighter';
+		ctx.globalAlpha = (style.alpha ?? 1) * 0.55;
+		ctx.fillStyle = c1;
+		paintPass(ctx, block, progress, style, -split, split * 0.35, scramble);
+		ctx.fillStyle = c2;
+		paintPass(ctx, block, progress, style, split, -split * 0.35, scramble);
+		ctx.restore();
 	}
+
+	ctx.fillStyle = style.color;
+	ctx.globalAlpha = style.alpha ?? 1;
+	paintPass(ctx, block, progress, style, 0, 0, scramble);
+
 	try {
 		(ctx as any).letterSpacing = '0px';
 	} catch {}

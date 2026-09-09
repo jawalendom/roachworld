@@ -29,9 +29,9 @@ const { editorHref, plainHref, current, hasEditor = true } = Astro.props;
 		font-size: 0.68rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		background: #14110c;
-		color: #8a8272;
-		border: 1px solid #4d5fff;
+		background: #050506;
+		color: #5f6068;
+		border: 1px solid #00ff9c;
 		padding: 0.55em 0.8em;
 	}
 	:global(html:not([data-edition])) .edt {
@@ -45,10 +45,10 @@ const { editorHref, plainHref, current, hasEditor = true } = Astro.props;
 		background: none;
 	}
 	.edt a[aria-current='true'] {
-		color: #4d5fff;
+		color: var(--blue);
 	}
 	:global(html[data-edition]) .edt a[aria-current='true'] {
-		color: #ede7d6;
+		color: #00ff9c;
 	}
 	.edt a.off {
 		opacity: 0.4;

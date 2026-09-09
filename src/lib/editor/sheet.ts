@@ -4,6 +4,7 @@
 
 import { fontsReady, onFontsChanged } from '../pretext/fonts';
 import { makeRng, type Rng } from './rng';
+import { crtTile } from './glitch';
 
 export interface SheetElement {
 	y: number;
@@ -98,18 +99,7 @@ export function mountSheet(
 	}
 
 	function buildGrain() {
-		const s = 150;
-		const c = document.createElement('canvas');
-		c.width = c.height = s;
-		const g = c.getContext('2d')!;
-		const im = g.createImageData(s, s);
-		for (let i = 0; i < im.data.length; i += 4) {
-			const v = Math.random();
-			im.data[i] = im.data[i + 1] = im.data[i + 2] = v > 0.5 ? 255 : 0;
-			im.data[i + 3] = (v > 0.985 ? 22 : v < 0.02 ? 34 : 6) * (opts.grainAlpha ?? 1);
-		}
-		g.putImageData(im, 0, 0);
-		return c;
+		return crtTile(160, opts.grainAlpha ?? 1);
 	}
 
 	function size() {
@@ -197,9 +187,10 @@ export function mountSheet(
 
 		if (grain) {
 			ctx.save();
-			ctx.globalCompositeOperation = 'overlay';
+			ctx.globalCompositeOperation = 'source-over';
 			const pat = ctx.createPattern(grain, 'repeat');
 			if (pat) {
+				// keep the tile locked to the viewport, not scrolling with content
 				ctx.fillStyle = pat;
 				ctx.fillRect(0, 0, W, vh);
 			}
