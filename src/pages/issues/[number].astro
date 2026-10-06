@@ -18,8 +18,7 @@ export async function getStaticPaths() {
 const { issue, isLatest } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const Editor = editorFor(issue.dir);
-const no = String(issue.data.number).padStart(2, '0');
-const title = `No. ${no} — ${issue.data.title}`;
+const title = `Vol ${issue.data.number} — ${issue.data.title}`;
 const desc = issue.data.blurb ?? `Issue ${issue.data.number} of ${SITE_TITLE}.`;
 const editorHref = `${base}/issues/${issue.dir}/`;
 const plainHref = `${base}/issues/${issue.dir}/plain/`;

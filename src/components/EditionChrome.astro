@@ -20,7 +20,6 @@ const items = issue
 			slug: articleSlug(a),
 		}))
 	: [];
-const no = issue ? String(issue.data.number).padStart(2, '0') : '';
 const titleOf = issue?.data.title ?? '';
 
 // hard segmented underlines — reads like a data strip, not a pen
@@ -65,7 +64,7 @@ const SCRAWLS = [
 				<div class="edx-panel" data-index-panel hidden role="dialog" aria-label="Issue contents">
 					<div class="edx-inner">
 						<p class="edx-kick">
-							Issue No. {no} — {titleOf}
+							Vol {issue?.data.number} — {titleOf}
 						</p>
 
 						<ol class="edx-list">

@@ -8,11 +8,11 @@ interface Props {
 	blurb?: string;
 	label?: string;
 }
-const { number, title, date, blurb, label = 'Issue' } = Astro.props;
+const { number, title, date, blurb, label = 'Vol' } = Astro.props;
 ---
 
 <header class="issue-masthead">
-	<p class="issue-no">{label} No. {String(number).padStart(2, '0')}</p>
+	<p class="issue-no">{label} {number}</p>
 	<h1 class="issue-title">{title}</h1>
 	<p class="issue-date"><FormattedDate date={date} /></p>
 	{blurb && <p class="issue-blurb">{blurb}</p>}

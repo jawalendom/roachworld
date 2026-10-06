@@ -20,7 +20,7 @@ const older = issues.slice(1);
 				{older.map((iss) => (
 					<li>
 						<a href={`${base}/issues/${iss.dir}/`}>
-							<span class="no">No. {String(iss.data.number).padStart(2, '0')}</span>
+							<span class="no">Vol {iss.data.number}</span>
 							<span class="ti">{iss.data.title}</span>
 							<span class="meta">
 								<FormattedDate date={iss.data.date} /> · {iss.articles.length} article

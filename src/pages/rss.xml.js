@@ -8,7 +8,7 @@ export async function GET(context) {
 
 	const items = issues.flatMap((issue) =>
 		issue.articles.map((article) => ({
-			title: `No. ${issue.data.number} — ${article.data.title}`,
+			title: `Vol ${issue.data.number} — ${article.data.title}`,
 			description: article.data.dek,
 			pubDate: article.data.pubDate,
 			link: `${base}/issues/${issue.dir}/${articleSlug(article)}/`,

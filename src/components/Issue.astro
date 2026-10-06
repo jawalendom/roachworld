@@ -59,7 +59,7 @@ const stamp =
 	{
 		issueHref && (
 			<p class="up">
-				<a href={issueHref}>← Issue No. {String(issueNumber).padStart(2, '0')}{issueTitle ? ` — ${issueTitle}` : ''}</a>
+				<a href={issueHref}>← Vol {issueNumber}{issueTitle ? ` — ${issueTitle}` : ''}</a>
 			</p>
 		)
 	}

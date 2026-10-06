@@ -15,8 +15,19 @@ export interface SheetElement {
 	lead?: number;
 	/** keep it drawn once revealed (default true). */
 	latch?: boolean;
-	draw(ctx: CanvasRenderingContext2D, p: number, info: { W: number; vh: number }): void;
+	draw(ctx: CanvasRenderingContext2D, p: number, info: FrameInfo): void;
 	_p?: number;
+}
+
+/** Per-frame context. `t` is seconds since the sheet mounted (frozen when the
+ *  viewer prefers reduced motion); `energy` is 0..1 from recent scroll speed. */
+export interface FrameInfo {
+	W: number;
+	vh: number;
+	t: number;
+	sy: number;
+	energy: number;
+	reduce: boolean;
 }
 
 export interface SheetMark {
@@ -51,6 +62,12 @@ export interface MountOpts {
 	seed: number;
 	ground: string;
 	grainAlpha?: number;
+	/** painted over the ground, under the content, every frame. */
+	background?: (ctx: CanvasRenderingContext2D, info: FrameInfo) => void;
+	/** painted over everything (after grain) — full-frame glitches. */
+	post?: (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, info: FrameInfo & { dpr: number }) => void;
+	/** animation frame cap (default 30). */
+	fps?: number;
 }
 
 export function mountSheet(
@@ -77,6 +94,10 @@ export function mountSheet(
 	let raf = 0;
 	let built = false;
 	let contentH = 0;
+	const t0 = performance.now();
+	let energy = 0;
+	let lastSy = window.scrollY;
+	let lastFrame = 0;
 
 	function scrollToMark(id: string, smooth = true) {
 		const m = marks.find((mk) => mk.id === id);
@@ -155,8 +176,26 @@ export function mountSheet(
 		const top = root.offsetTop;
 		const sy = Math.max(0, window.scrollY - top);
 
+		// scroll speed → energy, decaying back to calm
+		const dy = Math.abs(window.scrollY - lastSy);
+		lastSy = window.scrollY;
+		energy = Math.min(1, energy * 0.9 + dy / 900);
+		const info: FrameInfo = {
+			W,
+			vh,
+			t: reduce ? 1e6 : (performance.now() - t0) / 1000,
+			sy,
+			energy: reduce ? 0 : energy,
+			reduce,
+		};
+
 		ctx.fillStyle = opts.ground;
 		ctx.fillRect(0, 0, W, vh);
+		if (opts.background) {
+			ctx.save();
+			opts.background(ctx, info);
+			ctx.restore();
+		}
 
 		for (const el of els) {
 			const startAt = el.y - (vh - (el.lead ?? vh * 0.28));
@@ -181,7 +220,7 @@ export function mountSheet(
 			if (el.y + el.h < sy - vh || el.y > sy + vh * 2) continue;
 			ctx.save();
 			ctx.translate(0, el.y - sy);
-			el.draw(ctx, pp, { W, vh });
+			el.draw(ctx, pp, info);
 			ctx.restore();
 		}
 
@@ -196,9 +235,24 @@ export function mountSheet(
 			}
 			ctx.restore();
 		}
+
+		if (opts.post) {
+			ctx.save();
+			opts.post(ctx, canvas, { ...info, dpr });
+			ctx.restore();
+		}
+	}
+
+	// continuous loop for the animated layers, capped so it stays cheap
+	function tick(now: number) {
+		raf = requestAnimationFrame(tick);
+		if (now - lastFrame < 1000 / (opts.fps ?? 30)) return;
+		lastFrame = now;
+		render();
 	}
 
 	function onScroll() {
+		if (!reduce) return; // the loop already redraws every frame
 		cancelAnimationFrame(raf);
 		raf = requestAnimationFrame(render);
 	}
@@ -209,6 +263,7 @@ export function mountSheet(
 		render();
 		root.dataset.ready = '';
 		window.addEventListener('scroll', onScroll, { passive: true });
+		if (!reduce) raf = requestAnimationFrame(tick);
 
 		// the drawn contents page is clickable — jump to the article's section
 		canvas.addEventListener('click', (e) => {

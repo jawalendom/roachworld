@@ -21,7 +21,7 @@ const { issueTitle, issueNo, items } = Astro.props;
 	<div class="idx-panel" id="issue-index-panel" data-idx-panel hidden>
 		<div class="idx-inner">
 			<div class="idx-head">
-				<p class="idx-issue">Issue No. {String(issueNo).padStart(2, '0')} — {issueTitle}</p>
+				<p class="idx-issue">Vol {issueNo} — {issueTitle}</p>
 				<button type="button" class="idx-close" data-idx-close aria-label="Close index">Close ✕</button>
 			</div>
 			<ol class="idx-list">

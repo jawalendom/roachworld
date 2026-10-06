@@ -1,5 +1,5 @@
 ---
-// Editor's view — Issue No. 01, "Erosion".
+// Editor's view — Vol 1, "Roachworld".
 // Art direction: near-black terminal ground, cold white, acid green + glitch
 // red. Machine-drawn — straight rules, registration brackets, RGB channel
 // split, decode-style reveals, scanlines. Seeded off the issue title.
@@ -112,7 +112,7 @@ const payload = {
 	import { seedFrom } from '../lib/editor/rng';
 	import { FONT } from '../lib/pretext/fonts';
 	import * as C from '../lib/editor/compose';
-	import { rule, crosshair, noiseBlocks } from '../lib/editor/glitch';
+	import { rule, crosshair, noiseBlocks, glitchField, frameTear } from '../lib/editor/glitch';
 
 	const root = document.querySelector<HTMLElement>('[data-edition-sheet]');
 	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
@@ -225,7 +225,13 @@ const payload = {
 				s.cursor = cy - s.vh * 0.72;
 				s.height = s.cursor;
 			},
-			{ seed: seedFrom(data.seed), ground: T.ground },
+			{
+				seed: seedFrom(data.seed),
+				ground: T.ground,
+				background: (ctx, info) =>
+					glitchField(ctx, info, { colors: [T.accent, T.accent2, CYAN], glyph: T.accent, mono: T.mono }),
+				post: frameTear,
+			},
 		);
 	}
 </script>

@@ -4,7 +4,7 @@
 import type { Sheet } from './sheet';
 import type { Block } from './parseBody';
 import { layoutInk, drawInk, fitInk } from './ink';
-import { rule, dataBar, brackets, crosshair, sliceGlitch } from './glitch';
+import { rule, dataBar, brackets, crosshair, sliceGlitch, hash } from './glitch';
 
 export interface Theme {
 	ground: string;
@@ -19,6 +19,10 @@ export interface Theme {
 }
 
 const SPLIT: [string, string] = ['#ff2e4d', '#13e8ff'];
+
+const TITLE_START = 0.25; // s after mount
+const TITLE_INTRO = 1.7; // s to fully resolve
+const TITLE_GLYPHS = [...'▚▞▙▟▛▜░▒▓█<>=×+#§¤@/\\'];
 
 export function contentBox(s: Sheet) {
 	const edge = Math.max(20, Math.min(s.W * 0.08, 90));
@@ -68,7 +72,7 @@ export function cover(
 		reveal: 60,
 		lead: s.vh * 0.4,
 		draw(ctx) {
-			mono(ctx, `▶ ISSUE_${String(d.no).padStart(2, '0')}`, x, 14, t.mono(14), t.accent, 4);
+			mono(ctx, `▶ VOL_${d.no}`, x, 14, t.mono(14), t.accent, 4);
 		},
 	});
 
@@ -95,18 +99,67 @@ export function cover(
 		h: tb.height + titlePx,
 		reveal: 1,
 		lead: 0,
-		draw(ctx) {
-			brackets(ctx, x - 26, -titlePx * 0.12, tb.width + 52, tb.height + titlePx * 0.32, 1, {
-				color: t.accent,
+		draw(ctx, _p, info) {
+			// glitch-load: glyphs resolve left→right through tears, flicker and a
+			// wide channel split, then settle; afterwards a short burst every few seconds.
+			const k = Math.min(1, Math.max(0, (info.t - TITLE_START) / TITLE_INTRO));
+			if (k <= 0) return;
+			const step = Math.floor(info.t * 24);
+			let burst = 0;
+			if (k >= 1 && !info.reduce) {
+				const cyc = Math.floor(info.t / 3.2);
+				const into = info.t - cyc * 3.2;
+				if (hash(cyc, 31) < 0.7 && into < 0.3) burst = 1 - into / 0.3;
+			}
+			const chaos = Math.max(1 - k, burst * 0.55);
+			if (chaos > 0.3 && hash(step, 5) < chaos * 0.3) return; // dropped frame
+
+			let idx = 0;
+			const lines = tb.lines.map((l) => {
+				const chars = [...l.text];
+				const text = chars
+					.map((ch, i) => {
+						const n = idx + i;
+						if (ch === ' ') return ch;
+						const settle = (n / tb.totalChars) * 0.75 + hash(n, 3) * 0.25;
+						const glyph = TITLE_GLYPHS[Math.floor(hash(step, n, 1) * TITLE_GLYPHS.length)];
+						if (k < settle) return k < settle - 0.4 && hash(step, n, 2) < 0.5 ? ' ' : glyph;
+						if (burst > 0 && hash(step, n, 9) < burst * 0.3) return glyph;
+						return ch;
+					})
+					.join('');
+				idx += chars.length;
+				return { ...l, text, y: l.y + titlePx * 0.8 };
+			});
+
+			const jx = chaos > 0.02 ? (hash(step, 40) - 0.5) * chaos * 16 : 0;
+			brackets(ctx, x - 26 + jx, -titlePx * 0.12, tb.width + 52, tb.height + titlePx * 0.32, Math.min(1, k * 1.6), {
+				color: chaos > 0.02 && hash(step, 41) < 0.3 ? t.accent2 : t.accent,
 				width: 2,
 				len: 28,
 			});
-			drawInk(ctx, { ...tb, lines: tb.lines.map((l) => ({ ...l, y: l.y + titlePx * 0.8 })) }, 1, {
-				font: t.display(titlePx),
-				color: t.ink,
-				split: 4,
-				splitColors: SPLIT,
-			});
+
+			const H = tb.height + titlePx * 0.5;
+			const y0 = -titlePx * 0.25;
+			const bands = chaos > 0.02 ? 8 : 1;
+			for (let b = 0; b < bands; b++) {
+				ctx.save();
+				if (bands > 1) {
+					const dx =
+						hash(step, b, 4) < 0.5 ? (hash(step, b, 5) - 0.5) * 2 * chaos * titlePx * 0.7 : 0;
+					ctx.beginPath();
+					ctx.rect(-20, y0 + (b * H) / bands, s.W + 40, H / bands + 1);
+					ctx.clip();
+					ctx.translate(dx, 0);
+				}
+				drawInk(ctx, { ...tb, lines }, 1, {
+					font: t.display(titlePx),
+					color: t.ink,
+					split: 4 + chaos * 70,
+					splitColors: SPLIT,
+				});
+				ctx.restore();
+			}
 		},
 	});
 

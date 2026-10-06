@@ -193,3 +193,116 @@ export function crtTile(size = 160, alpha = 1): HTMLCanvasElement {
 	g.putImageData(im, 0, 0);
 	return c;
 }
+
+// ── animated layers ─────────────────────────────────────────────────────────
+
+/** Stable 0..1 hash of a few integers — per-frame randomness that doesn't
+ *  disturb the sheet's seeded layout rng. */
+export function hash(a: number, b = 0, c = 0): number {
+	let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2246822519);
+	h = Math.imul(h ^ (h >>> 13), 1274126177);
+	return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+const RAIN = '01<>/\\[]{}#%*+=~|:.$@&?!ABCDEF▚▞░▒▓';
+
+export interface FieldOpts {
+	colors: string[]; // accent palette for blocks/tears
+	glyph: string; // colour of the drifting static
+	mono: (px: number) => string;
+}
+
+/** The live background: drifting glyph static, datamosh blocks, tear lines,
+ *  a rolling CRT band and the odd full-screen colour hit. `energy` (scroll
+ *  speed) pushes everything harder. */
+export function glitchField(
+	ctx: CanvasRenderingContext2D,
+	info: { W: number; vh: number; t: number; sy: number; energy: number; reduce: boolean },
+	o: FieldOpts,
+) {
+	const { W, vh, energy } = info;
+	const t = info.reduce ? 0 : info.t;
+	const step = Math.floor(t * 12); // 12 fps "steppy" clock for the noise
+	const amp = 0.55 + energy * 1.6;
+
+	// drifting glyph static — columns falling at their own speeds
+	const px = W < 620 ? 11 : 13;
+	ctx.font = o.mono(px);
+	ctx.textBaseline = 'top';
+	const colW = px * 1.6;
+	const cols = Math.ceil(W / colW);
+	for (let c = 0; c < cols; c++) {
+		const speed = 18 + hash(c, 1) * 70;
+		const len = 6 + Math.floor(hash(c, 2) * 18);
+		const head = ((t * speed + hash(c, 3) * vh * 2 + info.sy * 0.15) % (vh + len * px * 1.3)) - len * px;
+		for (let r = 0; r < len; r++) {
+			const y = head - r * px * 1.3;
+			if (y < -px || y > vh) continue;
+			const fade = 1 - r / len;
+			ctx.globalAlpha = (r === 0 ? 0.32 : 0.11 * fade) * amp;
+			ctx.fillStyle = r === 0 ? o.colors[0] : o.glyph;
+			const g = RAIN[Math.floor(hash(c, r, step >> (r === 0 ? 0 : 2)) * RAIN.length)];
+			ctx.fillText(g, c * colW, y);
+		}
+	}
+
+	// datamosh blocks — reshuffled every step
+	const nBlocks = Math.round(10 + energy * 40);
+	for (let i = 0; i < nBlocks; i++) {
+		const h0 = hash(step, i, 7);
+		if (h0 > 0.75 + energy * 0.2) continue;
+		const bw = 6 + hash(step, i, 8) * (hash(step, i, 9) > 0.9 ? 260 : 40);
+		const bh = 2 + hash(step, i, 10) * 9;
+		ctx.globalAlpha = (0.12 + hash(step, i, 11) * 0.4) * amp;
+		ctx.fillStyle = o.colors[Math.floor(hash(step, i, 12) * o.colors.length)];
+		ctx.fillRect(hash(step, i, 13) * W, hash(step, i, 14) * vh, bw, bh);
+	}
+
+	// full-width tear lines
+	const tears = Math.floor(hash(step, 99) * 3 + energy * 6);
+	for (let i = 0; i < tears; i++) {
+		ctx.globalAlpha = (0.1 + hash(step, i, 21) * 0.25) * amp;
+		ctx.fillStyle = o.colors[Math.floor(hash(step, i, 22) * o.colors.length)];
+		ctx.fillRect(0, hash(step, i, 23) * vh, W, 1 + hash(step, i, 24) * 2);
+	}
+
+	// rolling CRT band
+	const bandY = ((t * 0.16) % 1.3) * vh - vh * 0.15;
+	const band = ctx.createLinearGradient(0, bandY - 70, 0, bandY + 70);
+	band.addColorStop(0, 'rgba(0,255,156,0)');
+	band.addColorStop(0.5, `rgba(0,255,156,${0.05 * amp})`);
+	band.addColorStop(1, 'rgba(0,255,156,0)');
+	ctx.globalAlpha = 1;
+	ctx.fillStyle = band;
+	ctx.fillRect(0, bandY - 70, W, 140);
+
+	// the odd full-screen colour hit
+	if (hash(step, 555) < 0.025 + energy * 0.08) {
+		ctx.globalAlpha = 0.05 + hash(step, 556) * 0.07;
+		ctx.fillStyle = o.colors[Math.floor(hash(step, 557) * o.colors.length)];
+		ctx.fillRect(0, 0, W, vh);
+	}
+	ctx.globalAlpha = 1;
+}
+
+/** Full-frame horizontal tear: re-blits a few bands of the finished frame
+ *  sideways. Rare when idle, frequent when scrolling hard. */
+export function frameTear(
+	ctx: CanvasRenderingContext2D,
+	canvas: HTMLCanvasElement,
+	info: { W: number; vh: number; t: number; energy: number; reduce: boolean; dpr: number },
+) {
+	if (info.reduce) return;
+	const step = Math.floor(info.t * 12);
+	const burst = hash(step, 777) < 0.04 + info.energy * 0.35;
+	if (!burst) return;
+	const { dpr } = info;
+	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	const n = 1 + Math.floor(hash(step, 778) * 4);
+	for (let i = 0; i < n; i++) {
+		const y = Math.floor(hash(step, i, 780) * info.vh * dpr);
+		const h = Math.floor((4 + hash(step, i, 781) * 40) * dpr);
+		const dx = Math.round((hash(step, i, 782) - 0.5) * (30 + info.energy * 120) * dpr);
+		ctx.drawImage(canvas, 0, y, canvas.width, h, dx, y, canvas.width, h);
+	}
+}
