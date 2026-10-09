@@ -1,0 +1,143 @@
+---
+// Full-page editor-view sheet for a chat piece: the article header, then the
+// whole thread landing bubble by bubble as you scroll.
+import { getImage } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+	article: CollectionEntry<'articles'>;
+	order: number;
+	backHref: string;
+	backLabel: string;
+}
+const { article, order, backHref, backLabel } = Astro.props;
+const d = article.data;
+
+const payload = {
+	order,
+	kicker: d.kicker,
+	title: d.title,
+	dek: d.dek,
+	byline: d.byline,
+	me: d.byline.split(' ')[0],
+	them: d.chatWith ?? 'Them',
+	backHref,
+	backLabel,
+	seed: `roachworld-chat-${d.title}`,
+	chat: await Promise.all(
+		(d.chat ?? []).map(async (m) => ({
+			from: m.from,
+			text: m.text,
+			at: m.at,
+			image: m.image
+				? {
+						url: (await getImage({ src: m.image, width: 600, format: 'webp' })).src,
+						w: m.image.width,
+						h: m.image.height,
+					}
+				: undefined,
+		})),
+	),
+};
+---
+
+<div class="ed-sheet" data-edition-sheet data-chat-sheet>
+	<canvas data-sheet></canvas>
+	<div data-sheet-spacer></div>
+	<div class="ed-scan" aria-hidden="true"></div>
+	<script type="application/json" data-editor-data set:html={JSON.stringify(payload)} />
+	<noscript>
+		<p><a href={backHref}>{backLabel}</a></p>
+	</noscript>
+</div>
+
+<style>
+	.ed-sheet {
+		position: relative;
+	}
+	.ed-sheet [data-sheet] {
+		position: sticky;
+		top: 0;
+		display: block;
+		width: 100vw;
+		height: 100vh;
+		margin-left: calc(50% - 50vw);
+	}
+	.ed-sheet[data-ready] [data-sheet] {
+		animation: ed-fade 0.35s steps(3) both;
+	}
+	@keyframes ed-fade {
+		from {
+			opacity: 0;
+		}
+	}
+	.ed-scan {
+		position: fixed;
+		inset: 0;
+		z-index: 5;
+		pointer-events: none;
+		background: repeating-linear-gradient(
+			to bottom,
+			rgba(0, 0, 0, 0) 0,
+			rgba(0, 0, 0, 0) 2px,
+			rgba(0, 0, 0, 0.24) 3px
+		);
+	}
+</style>
+
+<script>
+	import { mountSheet } from '../lib/editor/sheet';
+	import { seedFrom } from '../lib/editor/rng';
+	import * as C from '../lib/editor/compose';
+	import { rule, brackets } from '../lib/editor/glitch';
+	import { T, glitchLayers } from '../lib/editor/theme';
+
+	const root = document.querySelector<HTMLElement>('[data-chat-sheet]');
+	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
+	if (root && dataEl) {
+		const data = JSON.parse(dataEl.textContent || '{}');
+		mountSheet(
+			root,
+			(s) => {
+				// the header is fully inked on arrival rather than waiting for scroll
+				const push = s.push.bind(s);
+				s.push = (el) => push({ ...el, lead: s.vh - el.y - 10, reveal: 1 });
+				s.gap(s.vh * 0.08);
+				C.divider(s, T, { order: data.order, kicker: data.kicker });
+				C.headline(s, T, data.title);
+				C.dek(s, T, data.dek);
+				C.byline(s, T, `By ${data.byline}`);
+				s.push = push;
+				C.chat(s, T, data.chat, { me: data.me, them: data.them });
+
+				// end: back to the issue
+				const { x, w, edge } = C.contentBox(s);
+				const y = s.cursor + 30;
+				const label = `[ <- ${data.backLabel.toUpperCase()} ]`;
+				s.push({
+					y,
+					h: 120,
+					reveal: s.vh * 0.2,
+					draw(ctx, p) {
+						rule(ctx, edge, 0, s.W - edge, 0, Math.min(1, p * 1.5), { color: T.accent, width: 2 });
+						ctx.save();
+						ctx.font = T.mono(13);
+						(ctx as any).letterSpacing = '3px';
+						const tw = ctx.measureText(label).width;
+						ctx.fillStyle = T.accent;
+						ctx.globalAlpha = Math.min(1, p * 2);
+						ctx.fillText(label, x, 64);
+						(ctx as any).letterSpacing = '0px';
+						ctx.restore();
+						brackets(ctx, x - 14, 36, tw + 28, 42, p, { color: T.accent, width: 2, len: 10 });
+					},
+				});
+				s.hotspot({ x: x - 14, y: y + 30, w: Math.min(w, 420), h: 54 }, 'back', data.backHref);
+				// stop scrolling with the back button in the lower part of the screen
+				s.cursor = y + 120 - s.vh * 0.75;
+				s.height = s.cursor;
+			},
+			{ seed: seedFrom(data.seed), ground: T.ground, ...glitchLayers },
+		);
+	}
+</script>

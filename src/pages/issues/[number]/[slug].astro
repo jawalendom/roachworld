@@ -2,7 +2,8 @@
 import { render } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
 import Issue from '../../../components/Issue.astro';
-import Chat from '../../../components/Chat.astro';
+import Edition from '../../../layouts/Edition.astro';
+import ChatSheet from '../../../components/ChatSheet.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
 import { parseBody } from '../../../lib/editor/parseBody';
 
@@ -28,6 +29,16 @@ const shareQuote =
 	null;
 ---
 
+{article.data.chat ? (
+<Edition title={article.data.title} description={article.data.dek} image={article.data.heroImage}>
+	<ChatSheet
+		article={article}
+		order={articleOrder(article)}
+		backHref={`${base}/issues/${issue.dir}/`}
+		backLabel={`Back to Vol ${issue.data.number}`}
+	/>
+</Edition>
+) : (
 <Layout title={article.data.title} description={article.data.dek} image={article.data.heroImage} wide>
 	<Issue
 		{...article.data}
@@ -40,12 +51,6 @@ const shareQuote =
 		shareQuote={shareQuote}
 	>
 		<Content />
-		{article.data.chat && (
-			<Chat
-				me={article.data.byline.split(' ')[0]}
-				them={article.data.chatWith ?? 'Them'}
-				messages={article.data.chat}
-			/>
-		)}
 	</Issue>
 </Layout>
+)}

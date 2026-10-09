@@ -49,7 +49,16 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 			>
 				<Content />
 				{a.data.chat && (
-					<Chat me={a.data.byline.split(' ')[0]} them={a.data.chatWith ?? 'Them'} messages={a.data.chat} />
+					<Chat
+						me={a.data.byline.split(' ')[0]}
+						them={a.data.chatWith ?? 'Them'}
+						messages={a.data.chatPreview ? a.data.chat.slice(0, a.data.chatPreview) : a.data.chat}
+						moreHref={
+							a.data.chatPreview && a.data.chatPreview < a.data.chat.length
+								? `${base}/issues/${issue.dir}/${a.slug}/`
+								: undefined
+						}
+					/>
 				)}
 			</ArticleBlock>
 		))

@@ -581,7 +581,15 @@ const POP = 0.38; // s — glitch settle once a bubble lands
 /** A text-message thread. Each bubble lands as it scrolls into view; replies
  *  from `them` are preceded by a three-dot typing bubble that bounces for as
  *  long as you hover in that stretch of scroll. */
-export function chat(s: Sheet, t: Theme, msgs: ChatMsg[], names: { me: string; them: string }) {
+export function chat(
+	s: Sheet,
+	t: Theme,
+	all: ChatMsg[],
+	o: { me: string; them: string; limit?: number; moreHref?: string },
+) {
+	const names = o;
+	const cut = !!o.limit && o.limit < all.length;
+	const msgs = cut ? all.slice(0, o.limit) : all;
 	const { x, w } = contentBox(s);
 	const px = s.W < 620 ? 16 : 17;
 	const lh = px * 1.4;
@@ -596,7 +604,7 @@ export function chat(s: Sheet, t: Theme, msgs: ChatMsg[], names: { me: string; t
 
 	msgs.forEach((m, i) => {
 		const mine = m.from === 'me';
-		const last = i === msgs.length - 1;
+		const last = !cut && i === msgs.length - 1;
 
 		if (m.at) {
 			const label = m.at.toUpperCase().replace(/,/g, '').replace(' AT ', '  //  ');
@@ -785,5 +793,79 @@ export function chat(s: Sheet, t: Theme, msgs: ChatMsg[], names: { me: string; t
 		s.cursor = y + bh + (next && next.from === m.from && !next.at ? 6 : 14);
 	});
 
+	if (cut && o.moreHref) readMore(s, t, o.moreHref, o.them, x, w);
 	s.cursor += 40;
+}
+
+/** Teaser ending for a cut-off thread: `them` still typing, then a button
+ *  through to the full piece. */
+function readMore(s: Sheet, t: Theme, href: string, them: string, x: number, w: number) {
+	const CYAN = SPLIT[1];
+	const r = 18;
+	const y = s.cursor + 18;
+	const label = s.W < 620 ? '[ READ FULL INTERVIEW -> ]' : '[ READ THE FULL INTERVIEW  -> ]';
+	const bpx = s.W < 620 ? 11 : 14;
+	const bh = 54;
+	const by = 66;
+	let bw = 0;
+	s.push({
+		y,
+		h: by + bh + 30,
+		reveal: s.vh * 0.25,
+		lead: s.vh * 0.3,
+		draw(ctx, p, info) {
+			// typing bubble that never resolves
+			mono(ctx, `> ${them.toUpperCase()} IS TYPING`, x + 4, 10, t.mono(10), CYAN, 3, 0.8);
+			ctx.beginPath();
+			(ctx as any).roundRect(x, 18, 62, 36, [r, r, r, 5]);
+			ctx.fillStyle = '#0d1013';
+			ctx.fill();
+			ctx.strokeStyle = CYAN;
+			ctx.globalAlpha = 0.45;
+			ctx.stroke();
+			ctx.globalAlpha = 1;
+			for (let d = 0; d < 3; d++) {
+				const ph = (info.t * 2.6 - d * 0.18) % 1;
+				const lift = ph < 0.35 ? Math.sin((ph / 0.35) * Math.PI) : 0;
+				ctx.globalAlpha = 0.45 + lift * 0.55;
+				ctx.fillStyle = CYAN;
+				ctx.beginPath();
+				ctx.arc(x + 17 + d * 14, 36 - lift * 5, 4, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.globalAlpha = 1;
+
+			// the button
+			const a = Math.min(1, Math.max(0, (p - 0.3) / 0.5));
+			if (a <= 0) return;
+			ctx.save();
+			ctx.font = t.mono(bpx);
+			(ctx as any).letterSpacing = '3px';
+			const tw = ctx.measureText(label).width;
+			(ctx as any).letterSpacing = '0px';
+			ctx.restore();
+			bw = Math.min(w, tw + 48);
+			const bx = x + (w - bw) / 2;
+			const step = Math.floor(info.t * 12);
+			const glitch = !info.reduce && hash(step, 901) < 0.08;
+			const dx = glitch ? (hash(step, 902) - 0.5) * 14 : 0;
+			ctx.globalAlpha = a;
+			if (glitch) {
+				ctx.fillStyle = SPLIT[0];
+				ctx.fillRect(bx - 4 + dx, by + 3, bw, bh);
+				ctx.fillStyle = SPLIT[1];
+				ctx.fillRect(bx + 4 - dx, by - 3, bw, bh);
+			}
+			ctx.fillStyle = t.accent;
+			ctx.fillRect(bx + dx, by, bw * Math.min(1, a * 1.4), bh);
+			brackets(ctx, bx - 10, by - 10, bw + 20, bh + 20, a, { color: t.accent, width: 2, len: 14 });
+			mono(ctx, label, bx + dx + (bw - tw) / 2, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.ground, 3, a);
+			const pulse = 0.5 + 0.5 * Math.sin(info.t * 3);
+			mono(ctx, '█', bx + bw + 18, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.accent, 0, a * pulse);
+			ctx.globalAlpha = 1;
+		},
+	});
+	// generous hit area over the button row
+	s.hotspot({ x, y: y + by - 12, w, h: bh + 24 }, 'read-more', href);
+	s.cursor = y + by + bh + 30;
 }

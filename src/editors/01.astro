@@ -30,6 +30,8 @@ const articles = await Promise.all(
 			filler: a.data.filler,
 			marginNote: a.data.marginNote ?? null,
 			chatWith: a.data.chatWith ?? null,
+			chatPreview: a.data.chatPreview ?? null,
+			href: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/issues/${issue.dir}/${articleSlug(a)}/`,
 			chat: a.data.chat
 				? await Promise.all(
 						a.data.chat.map(async (m) => ({
@@ -127,27 +129,15 @@ const payload = {
 <script>
 	import { mountSheet } from '../lib/editor/sheet';
 	import { seedFrom } from '../lib/editor/rng';
-	import { FONT } from '../lib/pretext/fonts';
 	import * as C from '../lib/editor/compose';
-	import { rule, crosshair, noiseBlocks, glitchField, frameTear } from '../lib/editor/glitch';
+	import { rule, crosshair, noiseBlocks } from '../lib/editor/glitch';
+	import { T, CYAN, glitchLayers } from '../lib/editor/theme';
 
 	const root = document.querySelector<HTMLElement>('[data-edition-sheet]');
 	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
 	if (root && dataEl) {
 		const data = JSON.parse(dataEl.textContent || '{}');
 
-		const T: C.Theme = {
-			ground: '#050506',
-			ink: '#e6e6e9',
-			dim: '#5f6068',
-			accent: '#00ff9c',
-			accent2: '#ff2e4d',
-			display: FONT.display,
-			body: FONT.body,
-			mono: FONT.mono,
-			hand: FONT.hand,
-		};
-		const CYAN = '#13e8ff';
 
 		const MARGIN_NOTES = ['flag this', 'signal ↑', 'ref: date', 'attenuating'];
 
@@ -210,9 +200,11 @@ const payload = {
 							C.chat(s, T, a.chat, {
 								me: a.byline.split(' ')[0],
 								them: a.chatWith ?? 'Them',
+								limit: a.chatPreview ?? undefined,
+								moreHref: a.href,
 							});
 						if (a.marginNote) C.marginNote(s, T, a.marginNote);
-						else if (s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
+						else if (!a.chat && s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
 					}
 					s.gap(s.vh * 0.12);
 				}
@@ -250,9 +242,7 @@ const payload = {
 			{
 				seed: seedFrom(data.seed),
 				ground: T.ground,
-				background: (ctx, info) =>
-					glitchField(ctx, info, { colors: [T.accent, T.accent2, CYAN], glyph: T.accent, mono: T.mono }),
-				post: frameTear,
+				...glitchLayers,
 			},
 		);
 	}

@@ -41,6 +41,8 @@ export interface SheetHotspot {
 	w: number;
 	h: number;
 	id: string;
+	/** navigate here instead of jumping to mark `id`. */
+	href?: string;
 }
 
 export interface Sheet {
@@ -55,7 +57,7 @@ export interface Sheet {
 	/** record a named scroll target at the current cursor (for the index). */
 	mark(id: string): void;
 	/** register a clickable region (sheet-content coords) that jumps to mark `id`. */
-	hotspot(rect: { x: number; y: number; w: number; h: number }, id: string): void;
+	hotspot(rect: { x: number; y: number; w: number; h: number }, id: string, href?: string): void;
 }
 
 export interface MountOpts {
@@ -155,8 +157,8 @@ export function mountSheet(
 			mark(id) {
 				marks.push({ id, y: this.cursor });
 			},
-			hotspot(rect, id) {
-				hotspots.push({ ...rect, id });
+			hotspot(rect, id, href) {
+				hotspots.push({ ...rect, id, href });
 			},
 		};
 		els = [];
@@ -268,7 +270,8 @@ export function mountSheet(
 		// the drawn contents page is clickable — jump to the article's section
 		canvas.addEventListener('click', (e) => {
 			const hs = hotspotAt(e.clientX, e.clientY);
-			if (hs) scrollToMark(hs.id, !reduce);
+			if (hs?.href) location.href = hs.href;
+			else if (hs) scrollToMark(hs.id, !reduce);
 		});
 		canvas.addEventListener('pointermove', (e) => {
 			canvas.style.cursor = hotspotAt(e.clientX, e.clientY) ? 'pointer' : '';

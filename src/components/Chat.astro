@@ -9,8 +9,10 @@ interface Props {
 	me: string;
 	them: string;
 	messages: { from: 'me' | 'them'; text?: string; at?: string; image?: ImageMetadata }[];
+	/** cut-off thread: end on `them` typing and a link to the full piece. */
+	moreHref?: string;
 }
-const { me, them, messages } = Astro.props;
+const { me, them, messages, moreHref } = Astro.props;
 const PARA = new RegExp('\\n\\s*\\n');
 const parasOf = (text = '') => text.split(PARA);
 ---
@@ -40,10 +42,23 @@ const parasOf = (text = '') => text.split(PARA);
 							)}
 						</div>
 					</div>
-					{i === messages.length - 1 && m.from === 'me' && <p class="chat-delivered">Delivered</p>}
+					{!moreHref && i === messages.length - 1 && m.from === 'me' && <p class="chat-delivered">Delivered</p>}
 				</>
 			);
 		})
+	}
+	{
+		moreHref && (
+			<>
+				<p class="chat-tag them">{`> ${them} is typing`}</p>
+				<div class="chat-typing chat-teaser" aria-hidden="true">
+					<span />
+					<span />
+					<span />
+				</div>
+				<a class="chat-more" href={moreHref}>[ Read the full interview -&gt; ]</a>
+			</>
+		)
 	}
 </div>
 
@@ -174,6 +189,47 @@ const parasOf = (text = '') => text.split(PARA);
 	}
 	.chat-typing span:nth-child(3) {
 		animation-delay: 0.32s;
+	}
+	.chat-typing.chat-teaser {
+		position: static;
+		display: flex;
+		width: max-content;
+		margin-top: 0.4rem;
+	}
+	.chat-more {
+		align-self: center;
+		margin-top: 1.6rem;
+		padding: 0.9rem 1.4rem;
+		font-family: var(--font-mono);
+		font-size: clamp(0.66rem, 2.6vw, 0.8rem);
+		letter-spacing: clamp(0.08em, 0.6vw, 0.2em);
+		white-space: nowrap;
+		text-transform: uppercase;
+		text-decoration: none;
+		color: var(--c-ground);
+		background: var(--c-green);
+		outline: 2px solid var(--c-green);
+		outline-offset: 6px;
+		animation: chat-more-glitch 4s steps(1) infinite;
+	}
+	.chat-more:hover,
+	.chat-more:focus-visible {
+		filter: drop-shadow(-3px 0 0 var(--c-red)) drop-shadow(3px 0 0 var(--c-cyan));
+	}
+	@keyframes chat-more-glitch {
+		0%,
+		92%,
+		100% {
+			transform: none;
+			filter: none;
+		}
+		93% {
+			transform: translateX(-5px) skewX(-6deg);
+			filter: drop-shadow(-4px 0 0 var(--c-red)) drop-shadow(4px 0 0 var(--c-cyan));
+		}
+		95% {
+			transform: translateX(4px);
+		}
 	}
 	@keyframes chat-dot {
 		0%,

@@ -41,6 +41,8 @@ const articles = defineCollection({
 			// scroll. `me` is the byline, `them` is `chatWith`; `at` prints a
 			// timestamp above the message.
 			chatWith: z.string().optional(),
+			// How many messages the issue page shows before "read more".
+			chatPreview: z.number().int().positive().optional(),
 			chat: z
 				.array(
 					z.object({
