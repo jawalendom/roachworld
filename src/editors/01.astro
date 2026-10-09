@@ -29,6 +29,23 @@ const articles = await Promise.all(
 			blocks: parseBody(a.body ?? ''),
 			filler: a.data.filler,
 			marginNote: a.data.marginNote ?? null,
+			chatWith: a.data.chatWith ?? null,
+			chat: a.data.chat
+				? await Promise.all(
+						a.data.chat.map(async (m) => ({
+							from: m.from,
+							text: m.text,
+							at: m.at,
+							image: m.image
+								? {
+										url: (await getImage({ src: m.image, width: 600, format: 'webp' })).src,
+										w: m.image.width,
+										h: m.image.height,
+									}
+								: undefined,
+						})),
+					)
+				: null,
 		};
 	}),
 );
@@ -189,6 +206,11 @@ const payload = {
 						C.byline(s, T, `By ${a.byline}`);
 						if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
 						C.body(s, T, a.blocks);
+						if (a.chat)
+							C.chat(s, T, a.chat, {
+								me: a.byline.split(' ')[0],
+								them: a.chatWith ?? 'Them',
+							});
 						if (a.marginNote) C.marginNote(s, T, a.marginNote);
 						else if (s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
 					}

@@ -3,6 +3,7 @@ import { render } from 'astro:content';
 import IssueMasthead from './IssueMasthead.astro';
 import ArticleBlock from './ArticleBlock.astro';
 import IssueIndex from './IssueIndex.astro';
+import Chat from './Chat.astro';
 import { articleSlug, articleOrder, type Issue } from '../lib/issues';
 
 interface Props {
@@ -47,6 +48,9 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 				filler={a.data.filler}
 			>
 				<Content />
+				{a.data.chat && (
+					<Chat me={a.data.byline.split(' ')[0]} them={a.data.chatWith ?? 'Them'} messages={a.data.chat} />
+				)}
 			</ArticleBlock>
 		))
 	}

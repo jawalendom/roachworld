@@ -37,6 +37,20 @@ const articles = defineCollection({
 			shareQuote: z.string().optional(),
 			// Optional hand-scrawled note in the editor view's margin for this piece.
 			marginNote: z.string().optional(),
+			// A text-message conversation, drawn as chat bubbles that arrive as you
+			// scroll. `me` is the byline, `them` is `chatWith`; `at` prints a
+			// timestamp above the message.
+			chatWith: z.string().optional(),
+			chat: z
+				.array(
+					z.object({
+						from: z.enum(['me', 'them']),
+						text: z.string().optional(),
+						image: image().optional(),
+						at: z.string().optional(),
+					}),
+				)
+				.optional(),
 		}),
 });
 

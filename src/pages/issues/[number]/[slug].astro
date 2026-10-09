@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
 import Issue from '../../../components/Issue.astro';
+import Chat from '../../../components/Chat.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
 import { parseBody } from '../../../lib/editor/parseBody';
 
@@ -39,5 +40,12 @@ const shareQuote =
 		shareQuote={shareQuote}
 	>
 		<Content />
+		{article.data.chat && (
+			<Chat
+				me={article.data.byline.split(' ')[0]}
+				them={article.data.chatWith ?? 'Them'}
+				messages={article.data.chat}
+			/>
+		)}
 	</Issue>
 </Layout>

@@ -566,3 +566,224 @@ function hexRgb(hex: string): [number, number, number] {
 	const n = parseInt(h.length === 3 ? h.replace(/(.)/g, '$1$1') : h, 16);
 	return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
+
+// ── chat ───────────────────────────────────────────────────────────────────
+export interface ChatMsg {
+	from: 'me' | 'them';
+	text?: string;
+	at?: string;
+	image?: { url: string; w: number; h: number };
+}
+
+const TYPING = 0.6; // share of a reply's reveal spent on the "typing…" bubble
+const POP = 0.38; // s — glitch settle once a bubble lands
+
+/** A text-message thread. Each bubble lands as it scrolls into view; replies
+ *  from `them` are preceded by a three-dot typing bubble that bounces for as
+ *  long as you hover in that stretch of scroll. */
+export function chat(s: Sheet, t: Theme, msgs: ChatMsg[], names: { me: string; them: string }) {
+	const { x, w } = contentBox(s);
+	const px = s.W < 620 ? 16 : 17;
+	const lh = px * 1.4;
+	const padX = 15;
+	const padY = 10;
+	const maxW = Math.min(w * 0.8, 440);
+	const CYAN = SPLIT[1];
+	const r = 18;
+
+	s.cursor += 30;
+	let prev: ChatMsg['from'] | null = null;
+
+	msgs.forEach((m, i) => {
+		const mine = m.from === 'me';
+		const last = i === msgs.length - 1;
+
+		if (m.at) {
+			const label = m.at.toUpperCase().replace(/,/g, '').replace(' AT ', '  //  ');
+			const y = s.cursor + 18;
+			s.push({
+				y,
+				h: 20,
+				reveal: 60,
+				draw(ctx) {
+					ctx.save();
+					ctx.font = t.mono(11);
+					(ctx as any).letterSpacing = '2px';
+					const tw = ctx.measureText(label).width;
+					(ctx as any).letterSpacing = '0px';
+					ctx.restore();
+					mono(ctx, label, x + (w - tw) / 2, 11, t.mono(11), t.dim, 2);
+				},
+			});
+			s.cursor = y + 30;
+			prev = null;
+		}
+
+		// sender tag whenever the speaker changes
+		if (prev !== m.from) {
+			const tag = (mine ? names.me : names.them).toUpperCase();
+			const y = s.cursor + (prev ? 18 : 4);
+			s.push({
+				y,
+				h: 14,
+				reveal: 40,
+				draw(ctx) {
+					ctx.save();
+					ctx.font = t.mono(10);
+					(ctx as any).letterSpacing = '3px';
+					const tw = ctx.measureText(tag).width;
+					(ctx as any).letterSpacing = '0px';
+					ctx.restore();
+					const tx = mine ? x + w - tw - 4 : x + 4;
+					mono(ctx, mine ? `${tag} <` : `> ${tag}`, mine ? tx - 22 : tx, 10, t.mono(10), mine ? t.accent : CYAN, 3);
+				},
+			});
+			s.cursor = y + 18;
+		}
+		prev = m.from;
+
+		// measure the bubble
+		let bw: number;
+		let bh: number;
+		let paras: ReturnType<typeof layoutInk>[] = [];
+		if (m.image) {
+			bw = Math.min(maxW, s.W < 620 ? 230 : 280);
+			bh = Math.round((bw * m.image.h) / m.image.w);
+		} else {
+			paras = (m.text ?? '').split(/\n\s*\n/).map((para) => layoutInk(para.trim(), t.body(px), maxW - padX * 2, lh, 0, 0));
+			const inner = Math.max(...paras.map((b) => b.width));
+			const textH = paras.reduce((h, b) => h + b.height, 0) + (paras.length - 1) * lh * 0.55;
+			bw = Math.ceil(inner + padX * 2);
+			bh = Math.ceil(textH + padY * 2);
+		}
+		const bx = mine ? x + w - bw : x;
+		const y = s.cursor;
+
+		let img: HTMLImageElement | null = null;
+		if (m.image) {
+			img = new Image();
+			img.src = m.image.url;
+		}
+
+		const fill = mine ? t.accent : '#0d1013';
+		const ink = mine ? t.ground : t.ink;
+		let poppedAt = -1;
+
+		const bubblePath = (ctx: CanvasRenderingContext2D, ox: number, oy: number) => {
+			ctx.beginPath();
+			const radii = mine ? [r, r, 5, r] : [r, r, r, 5];
+			(ctx as any).roundRect(bx + ox, oy, bw, bh, radii);
+		};
+
+		const paint = (ctx: CanvasRenderingContext2D, ox: number, oy: number) => {
+			if (img) {
+				ctx.save();
+				bubblePath(ctx, ox, oy);
+				ctx.clip();
+				if (img.complete && img.naturalWidth) ctx.drawImage(img, bx + ox, oy, bw, bh);
+				else {
+					ctx.fillStyle = '#0d1013';
+					ctx.fillRect(bx + ox, oy, bw, bh);
+				}
+				ctx.restore();
+				bubblePath(ctx, ox, oy);
+				ctx.strokeStyle = CYAN;
+				ctx.globalAlpha = 0.55;
+				ctx.lineWidth = 1;
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+				return;
+			}
+			bubblePath(ctx, ox, oy);
+			ctx.fillStyle = fill;
+			ctx.fill();
+			if (!mine) {
+				ctx.strokeStyle = CYAN;
+				ctx.globalAlpha = 0.45;
+				ctx.lineWidth = 1;
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
+			let ty = oy + padY;
+			for (const b of paras) {
+				drawInk(
+					ctx,
+					{ ...b, lines: b.lines.map((l) => ({ ...l, x: bx + ox + padX, y: ty + l.y + px * 0.98 })) },
+					1,
+					{ font: t.body(px), color: ink },
+				);
+				ty += b.height + lh * 0.55;
+			}
+		};
+
+		s.push({
+			y,
+			h: bh + 24,
+			reveal: mine ? s.vh * 0.08 : s.vh * 0.26,
+			lead: s.vh * 0.3,
+			draw(ctx, p, info) {
+				const landAt = mine ? 0.35 : TYPING;
+				if (p < landAt) {
+					if (mine) return;
+					// typing bubble — three dots bouncing in sequence
+					const tw = 62;
+					const th = 36;
+					ctx.beginPath();
+					(ctx as any).roundRect(x, 0, tw, th, [r, r, r, 5]);
+					ctx.fillStyle = '#0d1013';
+					ctx.fill();
+					ctx.strokeStyle = CYAN;
+					ctx.globalAlpha = 0.45;
+					ctx.stroke();
+					ctx.globalAlpha = 1;
+					for (let d = 0; d < 3; d++) {
+						const ph = (info.t * 2.6 - d * 0.18) % 1;
+						const lift = ph < 0.35 ? Math.sin((ph / 0.35) * Math.PI) : 0;
+						ctx.globalAlpha = 0.45 + lift * 0.55;
+						ctx.fillStyle = d === 1 && lift > 0.6 ? t.accent : CYAN;
+						ctx.beginPath();
+						ctx.arc(x + 17 + d * 14, th / 2 - lift * 5, 4, 0, Math.PI * 2);
+						ctx.fill();
+					}
+					ctx.globalAlpha = 1;
+					return;
+				}
+				if (poppedAt < 0) poppedAt = info.t;
+				const g = info.reduce ? 1 : Math.min(1, (info.t - poppedAt) / POP);
+				const chaos = 1 - g;
+				if (chaos > 0) {
+					// land with a torn RGB split that settles
+					const sp = chaos * 9;
+					ctx.save();
+					ctx.globalCompositeOperation = 'lighter';
+					ctx.globalAlpha = 0.5 * chaos;
+					bubblePath(ctx, -sp, sp * 0.3);
+					ctx.fillStyle = SPLIT[0];
+					ctx.fill();
+					bubblePath(ctx, sp, -sp * 0.3);
+					ctx.fillStyle = SPLIT[1];
+					ctx.fill();
+					ctx.restore();
+					const bands = 5;
+					for (let b = 0; b < bands; b++) {
+						ctx.save();
+						ctx.beginPath();
+						ctx.rect(bx - 40, (b * bh) / bands, bw + 80, bh / bands + 1);
+						ctx.clip();
+						const dx = hash(Math.floor(info.t * 30), i, b) < 0.45 ? (hash(i, b, Math.floor(info.t * 30)) - 0.5) * 36 * chaos : 0;
+						paint(ctx, dx, 0);
+						ctx.restore();
+					}
+				} else {
+					paint(ctx, 0, 0);
+				}
+				if (last && mine) mono(ctx, 'DELIVERED', x + w - 80, bh + 18, t.mono(10), t.dim, 2);
+			},
+		});
+
+		const next = msgs[i + 1];
+		s.cursor = y + bh + (next && next.from === m.from && !next.at ? 6 : 14);
+	});
+
+	s.cursor += 40;
+}
