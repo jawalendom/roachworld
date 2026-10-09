@@ -1,0 +1,312 @@
+---
+// Interview UI component - renders as scroll-driven text conversation
+---
+
+<div class="interview-container" data-interview>
+	<div class="interview-messages" data-messages>
+		<!-- Messages will be rendered here -->
+	</div>
+	<div class="interview-typing" data-typing aria-hidden="true">
+		<span class="typing-bubble">●</span>
+		<span class="typing-bubble">●</span>
+		<span class="typing-bubble">●</span>
+	</div>
+</div>
+
+<style>
+	.interview-container {
+		position: relative;
+		padding: 2rem;
+		font-family: var(--font-mono);
+		color: var(--interview-ink, #e6e6e9);
+		background: var(--interview-ground, #050506);
+		overflow: hidden;
+	}
+
+	.interview-messages {
+		max-width: 600px;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.interview-message {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+		opacity: 0;
+		animation: msg-appear 0.4s ease-out forwards;
+	}
+
+	.interview-message.user {
+		justify-content: flex-end;
+		animation-delay: var(--delay, 0s);
+	}
+
+	.interview-message.assistant {
+		justify-content: flex-start;
+		animation-delay: var(--delay, 0s);
+	}
+
+	@keyframes msg-appear {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.message-bubble {
+		padding: 0.75rem 1rem;
+		border-radius: 18px;
+		word-wrap: break-word;
+		max-width: 400px;
+		font-size: 0.95rem;
+		line-height: 1.4;
+		letter-spacing: 0.3px;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.user .message-bubble {
+		background: linear-gradient(135deg, #00ff9c, #00ff9c);
+		color: #050506;
+		font-weight: 500;
+		box-shadow: 0 0 20px rgba(0, 255, 156, 0.3);
+	}
+
+	.assistant .message-bubble {
+		background: rgba(19, 232, 255, 0.1);
+		border: 1px solid rgba(19, 232, 255, 0.4);
+		color: #e6e6e9;
+	}
+
+	.message-text {
+		word-break: break-word;
+		white-space: pre-wrap;
+	}
+
+	.interview-typing {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.75rem 1rem;
+		opacity: 0;
+		animation: typing-appear 0.6s ease-out forwards;
+	}
+
+	@keyframes typing-appear {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	.typing-bubble {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #13e8ff;
+		animation: typing-bounce 1.4s infinite;
+		box-shadow: 0 0 8px rgba(19, 232, 255, 0.6);
+	}
+
+	.typing-bubble:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-bubble:nth-child(2) {
+		animation-delay: 0.2s;
+	}
+
+	.typing-bubble:nth-child(3) {
+		animation-delay: 0.4s;
+	}
+
+	@keyframes typing-bounce {
+		0%,
+		60%,
+		100% {
+			transform: translateY(0);
+			opacity: 0.6;
+		}
+		30% {
+			transform: translateY(-10px);
+			opacity: 1;
+		}
+	}
+
+	.timestamp {
+		font-size: 0.75rem;
+		color: #5f6068;
+		text-align: center;
+		margin: 1rem 0;
+		opacity: 0.6;
+	}
+
+	/* Glitch effect on text */
+	.message-bubble::before,
+	.message-bubble::after {
+		content: attr(data-text);
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+	}
+
+	.message-bubble.glitch::before {
+		animation: glitch-1 0.2s infinite;
+		color: #ff2e4d;
+		z-index: -1;
+	}
+
+	.message-bubble.glitch::after {
+		animation: glitch-2 0.2s infinite;
+		color: #13e8ff;
+		z-index: -2;
+	}
+
+	@keyframes glitch-1 {
+		0% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+		20% {
+			clip-path: rect(0, 32px, 2px, 0);
+			opacity: 0.8;
+			left: -2px;
+		}
+		40% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+		100% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+	}
+
+	@keyframes glitch-2 {
+		0% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+		20% {
+			clip-path: rect(0, 0, 2px, 32px);
+			opacity: 0.8;
+			left: 2px;
+		}
+		40% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+		100% {
+			clip-path: rect(0, 0, 0, 0);
+			opacity: 0;
+		}
+	}
+
+	/* Responsive */
+	@media (max-width: 640px) {
+		.interview-container {
+			padding: 1rem;
+		}
+
+		.message-bubble {
+			max-width: 280px;
+			font-size: 0.9rem;
+		}
+
+		.interview-messages {
+			gap: 1rem;
+		}
+	}
+</style>
+
+<script>
+	const INTERVIEW_DATA = [
+		{ type: 'user', text: 'Can I text message interview you for a zine I\'m building?' },
+		{ type: 'assistant', text: 'Hell yeahhhh' },
+		{ type: 'user', text: 'First question: if you could have a coffee hour with anyone dead or alive who would it be?' },
+		{ type: 'assistant', text: 'Hayao Miyazaki would love to hear his thoughts on his creative process & the future with respect to AI.' },
+		{ type: 'user', text: 'Yea that\'d be crazy wonder what his response was to that moment where it felt like everyone was studio ghiblifying themselves.' },
+		{ type: 'user', text: 'What\'s been a muse in your art recently? It can be person place thing or idea' },
+		{ type: 'assistant', text: 'I\'ve been really loving Daniel Dalen\'s videos on YouTube. His authenticity, dedication to the grind, but also ability to find time for relationships in his life. So he\'s a muse in his approach to life and what he\'s been able to achieve.' },
+		{ type: 'user', text: 'Thoughts on New York fashion week?' },
+		{ type: 'assistant', text: 'Oh yeah I went to it for the first time this year! It was overwhelming and sort of degenerate, at least the SoHo area was. But I had a great time meeting new people. The thing about fashion is that it\'s so visual that you can be SO quick to make judgments and assumptions about the person based on what they are wearing. For a lack of better words, you can lose or gain someone\'s respect in a split second just by what you have on. But fashion week, talking to all these new different people, also made me realize that we\'re all still just trying to find our style, trying to find what feels right. And you never know what feels right until you spend a day in the fit.' },
+		{ type: 'user', text: 'The second framing is so real with the clothes you\'re making and the brand you\'re building. Is there an intent in the elevator pitch split second effect that you hope your brand creates for its community?' },
+		{ type: 'assistant', text: 'I think the core of the brand is honesty; living true, taking inspiration from many sources and dressing in what feels good to you. Our design ethos is cityboy americana; so trying to design clothes in the context of the city and its many functions. So comfort in how your clothes make you feel; internally and externally.' },
+		{ type: 'user', text: 'Do you have any items of clothing, new or old, that you own that you\'ve been really vibing with recently? Send a picture if you can and tell me about what you feel it signals to strangers about you.' },
+		{ type: 'assistant', text: 'YES. This Lakers hat. My parents got me this Lakers hat when I was a kid and I used to hate wearing it because it had green on the bottom of the brim, which reminded me of the Celtics. Now we\'re making a hat next for the clothing brand and I\'ve been using this hat as a reference. It has a shorter brim at 6.5cm VS 7cm which gives it an interesting shape. And I love how it looks now.\n\nIn general, I think hats play an important role of expression in that they are a way to show your interests and support. They\'re wearable souvenirs and hold memories. I even still wear the not so different hat you gave me.' },
+		{ type: 'user', text: 'Ok I love baseball hats they\'re lowkey a part of my personal style uniform. 10/10' },
+		{ type: 'user', text: 'Ok last question: what inspires you to keep creating and working at the level of consistency that you\'ve been working at?' },
+		{ type: 'assistant', text: 'I agree that comparison is the thief of joy; but sometimes, especially when starting out, I don\'t think it\'s all that bad to use other people as benchmarks to feed the "why not me" mentality. So I think I have set up okay processes to keep up a baseline routine of pushing things out, but up until this point, it\'s been a sort of a chip on my shoulder that I\'ve used to grind through. Definitely not sustainable, but surprisingly useful?' },
+		{ type: 'user', text: 'Real af. Ty sm goat.' },
+	];
+
+	function initInterview() {
+		const container = document.querySelector('[data-interview]') as HTMLElement | null;
+		if (!container) return;
+
+		const messagesEl = container.querySelector('[data-messages]') as HTMLElement | null;
+		const typingEl = container.querySelector('[data-typing]') as HTMLElement | null;
+
+		// Render messages
+		INTERVIEW_DATA.forEach((msg, idx) => {
+			const msgEl = document.createElement('div');
+			msgEl.className = `interview-message ${msg.type}`;
+			(msgEl as HTMLElement).style.setProperty('--delay', `${idx * 0.15}s`);
+
+			const bubble = document.createElement('div');
+			bubble.className = 'message-bubble';
+			bubble.setAttribute('data-text', msg.text);
+			bubble.innerHTML = `<div class="message-text">${msg.text}</div>`;
+
+			msgEl.appendChild(bubble);
+			messagesEl?.appendChild(msgEl);
+		});
+
+		// Show typing indicator after all messages
+		if (typingEl) {
+			(typingEl as HTMLElement).style.setProperty('--delay', `${INTERVIEW_DATA.length * 0.15 + 0.5}s`);
+		}
+
+		// Scroll-driven reveal
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						(entry.target as HTMLElement).style.opacity = '1';
+						// Random glitch on scroll
+						if (Math.random() < 0.15) {
+							(entry.target as HTMLElement).querySelector('.message-bubble')?.classList.add('glitch');
+							setTimeout(() => {
+								(entry.target as HTMLElement).querySelector('.message-bubble')?.classList.remove('glitch');
+							}, 200);
+						}
+					}
+				});
+			},
+			{ threshold: 0.5 },
+		);
+
+		document.querySelectorAll('.interview-message').forEach((el) => {
+			observer.observe(el);
+		});
+	}
+
+	// Run on page load
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initInterview);
+	} else {
+		initInterview();
+	}
+</script>
