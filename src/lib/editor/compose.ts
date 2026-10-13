@@ -385,7 +385,7 @@ export function byline(s: Sheet, t: Theme, text: string) {
 		h: 24,
 		reveal: 50,
 		draw(ctx) {
-			mono(ctx, `// ${text.toUpperCase()}`, x, 11, t.mono(11), t.dim, 2);
+			mono(ctx, `// ${text.toUpperCase()}`, x, 11, t.mono(11), t.accent2, 2);
 		},
 	});
 	s.cursor = y + 40;
