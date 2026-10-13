@@ -193,7 +193,7 @@ const payload = {
 				);
 				for (const a of data.articles) {
 					s.mark(a.slug);
-					C.divider(s, T, { order: a.order, kicker: a.filler ? 'Filler' : a.kicker });
+					C.divider(s, T, { order: a.order, kicker: a.filler ? 'Filler' : a.kicker, size: headPx });
 					C.headline(s, T, a.title, headPx);
 					if (a.filler) {
 						C.fillerNote(s, T);
