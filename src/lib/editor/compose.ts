@@ -254,14 +254,11 @@ export function contents(
 }
 
 // ── article divider ────────────────────────────────────────────────────────
-/** Rule + "[ NN ]" + kicker above an article. `size` is the headline size so
- *  the number matches the title under it. */
-export function divider(s: Sheet, t: Theme, d: { order: number; kicker: string; size?: number }) {
+export function divider(s: Sheet, t: Theme, d: { order: number; kicker: string }) {
 	const { x, edge } = contentBox(s);
 	const y = s.cursor + 44;
-	const numPx = d.size ?? (s.W < 620 ? 58 : 84);
+	const numPx = s.W < 620 ? 58 : 84;
 	const no = String(d.order).padStart(2, '0');
-	const nb = layoutInk(`[ ${no} ]`, t.display(numPx), 1e6, numPx, x, 0);
 
 	s.push({
 		y,
@@ -276,13 +273,14 @@ export function divider(s: Sheet, t: Theme, d: { order: number; kicker: string; 
 				seg: 12,
 				gap: 6,
 			});
+			const nb = layoutInk(`[ ${no} ]`, t.display(numPx), 400, numPx, x, 0);
 			drawInk(ctx, { ...nb, lines: nb.lines.map((l) => ({ ...l, y: numPx * 0.9 + 24 })) }, Math.min(1, p * 1.6), {
 				font: t.display(numPx),
 				color: t.ink,
 				split: 5,
 				splitColors: SPLIT,
 			});
-			mono(ctx, `// ${d.kicker.toUpperCase()}`, x + nb.width + 18, numPx * 0.5 + 24, t.mono(12), t.accent, 3);
+			mono(ctx, `// ${d.kicker.toUpperCase()}`, x + numPx * 3.0, numPx * 0.5 + 24, t.mono(12), t.accent, 3);
 		},
 	});
 	s.cursor = y + numPx + 24;

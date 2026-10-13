@@ -113,9 +113,8 @@ const payload = {
 				const push = s.push.bind(s);
 				s.push = (el) => push({ ...el, lead: s.vh - el.y - 10, reveal: 1 });
 				s.gap(s.vh * 0.08);
-				const headPx = C.headlineSize(s, T, data.issueTitles);
-				C.divider(s, T, { order: data.order, kicker: data.kicker, size: headPx });
-				C.headline(s, T, data.title, headPx);
+				C.divider(s, T, { order: data.order, kicker: data.kicker });
+				C.headline(s, T, data.title, C.headlineSize(s, T, data.issueTitles));
 				C.dek(s, T, data.dek);
 				C.byline(s, T, `By ${data.byline}`);
 				s.push = push;
