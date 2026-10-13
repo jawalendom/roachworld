@@ -3,7 +3,7 @@ import { render } from 'astro:content';
 import Layout from '../../../layouts/Layout.astro';
 import Issue from '../../../components/Issue.astro';
 import Edition from '../../../layouts/Edition.astro';
-import ChatSheet from '../../../components/ChatSheet.astro';
+import ArticleSheet from '../../../components/ArticleSheet.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
 import { parseBody } from '../../../lib/editor/parseBody';
 
@@ -31,11 +31,12 @@ const shareQuote =
 
 {article.data.chat ? (
 <Edition title={article.data.title} description={article.data.dek} image={article.data.heroImage}>
-	<ChatSheet
+	<ArticleSheet
 		article={article}
 		order={articleOrder(article)}
 		backHref={`${base}/issues/${issue.dir}/`}
 		backLabel={`Back to Vol ${issue.data.number}`}
+		issueTitles={issue.articles.map((a) => a.data.title)}
 	/>
 </Edition>
 ) : (

@@ -7,7 +7,9 @@ export type Block =
 	| { type: 'heading'; text: string }
 	| { type: 'pull'; text: string; cite?: string }
 	| { type: 'list'; items: string[] }
-	| { type: 'rule' };
+	| { type: 'rule' }
+	/** `{/* read-more *\/}` — the issue page stops here and links to the full piece. */
+	| { type: 'more' };
 
 const stripInline = (s: string) =>
 	s
@@ -36,6 +38,10 @@ export function parseBody(src: string): Block[] {
 
 		if (/^#{2,4}\s+/.test(chunk)) {
 			blocks.push({ type: 'heading', text: stripInline(chunk.replace(/^#+\s+/, '')) });
+			continue;
+		}
+		if (/^\{\/\*\s*read-?more\s*\*\/\}$/i.test(chunk)) {
+			blocks.push({ type: 'more' });
 			continue;
 		}
 		if (/^-{3,}$/.test(chunk)) {

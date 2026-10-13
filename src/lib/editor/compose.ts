@@ -22,6 +22,7 @@ const SPLIT: [string, string] = ['#ff2e4d', '#13e8ff'];
 
 const TITLE_START = 0.25; // s after mount
 const TITLE_INTRO = 1.7; // s to fully resolve
+const HEADLINE_DECODE = 0.9; // s
 const TITLE_GLYPHS = [...'▚▞▙▟▛▜░▒▓█<>=×+#§¤@/\\'];
 
 export function contentBox(s: Sheet) {
@@ -285,18 +286,40 @@ export function divider(s: Sheet, t: Theme, d: { order: number; kicker: string }
 	s.cursor = y + numPx + 24;
 }
 
-export function headline(s: Sheet, t: Theme, text: string) {
+const headlineWidth = (s: Sheet) => {
 	const { x, edge } = contentBox(s);
-	const w = Math.min(s.W - x - edge, 980);
+	return Math.min(s.W - x - edge, 980);
+};
+
+/** One headline size for a whole issue: the largest that fits every title in
+ *  ≤3 lines without breaking a word, capped by screen width (≈60px on a
+ *  phone, 104px on desktop). Syne ExtraBold is very wide, so a long word can
+ *  need to go well below 44px on a phone — `floor` lets it. */
+export function headlineSize(s: Sheet, t: Theme, titles: string[], floor = 24) {
+	const cap = Math.round(Math.min(104, Math.max(48, s.W * 0.155)));
+	const w = headlineWidth(s);
+	return Math.min(...titles.map((title) => fitInk(title.toUpperCase(), t.display, w, 3, [Math.min(floor, cap), cap], 1.0)));
+}
+
+export function headline(s: Sheet, t: Theme, text: string, size?: number) {
+	const { x } = contentBox(s);
+	const w = headlineWidth(s);
 	const head = text.toUpperCase();
-	const px = fitInk(head, t.display, w, 3, [44, 104], 1.0);
+	const px = size ?? headlineSize(s, t, [text]);
 	const b = layoutInk(head, t.display(px), w, px, x, 0);
 	const y = s.cursor + 26;
+	// a headline always decodes in over at least HEADLINE_DECODE once it first
+	// shows, even if the sheet hands it over fully revealed (end-of-sheet
+	// elements, jumps from the index, pages that open on it)
+	let seenAt = -1;
 	s.push({
 		y,
 		h: b.height + px,
 		reveal: s.vh * 0.45,
-		draw(ctx, p) {
+		draw(ctx, scrollP, info) {
+			if (seenAt < 0) seenAt = info.t;
+			const p = info.reduce ? scrollP : Math.min(scrollP, (info.t - seenAt) / HEADLINE_DECODE);
+			if (p <= 0) return;
 			rule(ctx, x - 18, 4, x - 18, b.height, Math.min(1, p * 2), { color: t.accent, width: 3 });
 			drawInk(ctx, { ...b, lines: b.lines.map((l) => ({ ...l, y: l.y + px * 0.82 })) }, p, {
 				font: t.display(px),
@@ -375,6 +398,7 @@ export function body(s: Sheet, t: Theme, blocks: Block[]) {
 	const lh = px * 1.62;
 
 	for (const block of blocks) {
+		if (block.type === 'more') continue;
 		if (block.type === 'rule') {
 			const y = s.cursor + lh * 0.4;
 			s.push({
@@ -793,20 +817,24 @@ export function chat(
 		s.cursor = y + bh + (next && next.from === m.from && !next.at ? 6 : 14);
 	});
 
-	if (cut && o.moreHref) readMore(s, t, o.moreHref, o.them, x, w);
+	if (cut && o.moreHref)
+		readMore(s, t, o.moreHref, { typing: o.them });
 	s.cursor += 40;
 }
 
 /** Teaser ending for a cut-off thread: `them` still typing, then a button
  *  through to the full piece. */
-function readMore(s: Sheet, t: Theme, href: string, them: string, x: number, w: number) {
+/** "Read more" button through to an article's own page. With `typing`, it is
+ *  preceded by that person's typing bubble that never resolves. */
+export function readMore(s: Sheet, t: Theme, href: string, o: { label?: string; typing?: string } = {}) {
+	const { x, w } = contentBox(s);
 	const CYAN = SPLIT[1];
 	const r = 18;
 	const y = s.cursor + 18;
-	const label = s.W < 620 ? '[ READ FULL INTERVIEW -> ]' : '[ READ THE FULL INTERVIEW  -> ]';
+	const label = o.label ?? '[ READ MORE  -> ]';
 	const bpx = s.W < 620 ? 11 : 14;
 	const bh = 54;
-	const by = 66;
+	const by = o.typing ? 116 : 40;
 	let bw = 0;
 	s.push({
 		y,
@@ -814,58 +842,63 @@ function readMore(s: Sheet, t: Theme, href: string, them: string, x: number, w: 
 		reveal: s.vh * 0.25,
 		lead: s.vh * 0.3,
 		draw(ctx, p, info) {
-			// typing bubble that never resolves
-			mono(ctx, `> ${them.toUpperCase()} IS TYPING`, x + 4, 10, t.mono(10), CYAN, 3, 0.8);
-			ctx.beginPath();
-			(ctx as any).roundRect(x, 18, 62, 36, [r, r, r, 5]);
-			ctx.fillStyle = '#0d1013';
-			ctx.fill();
-			ctx.strokeStyle = CYAN;
-			ctx.globalAlpha = 0.45;
-			ctx.stroke();
-			ctx.globalAlpha = 1;
-			for (let d = 0; d < 3; d++) {
-				const ph = (info.t * 2.6 - d * 0.18) % 1;
-				const lift = ph < 0.35 ? Math.sin((ph / 0.35) * Math.PI) : 0;
-				ctx.globalAlpha = 0.45 + lift * 0.55;
-				ctx.fillStyle = CYAN;
-				ctx.beginPath();
-				ctx.arc(x + 17 + d * 14, 36 - lift * 5, 4, 0, Math.PI * 2);
-				ctx.fill();
-			}
-			ctx.globalAlpha = 1;
-
-			// the button
-			const a = Math.min(1, Math.max(0, (p - 0.3) / 0.5));
-			if (a <= 0) return;
-			ctx.save();
-			ctx.font = t.mono(bpx);
-			(ctx as any).letterSpacing = '3px';
-			const tw = ctx.measureText(label).width;
-			(ctx as any).letterSpacing = '0px';
-			ctx.restore();
-			bw = Math.min(w, tw + 48);
-			const bx = x + (w - bw) / 2;
-			const step = Math.floor(info.t * 12);
-			const glitch = !info.reduce && hash(step, 901) < 0.08;
-			const dx = glitch ? (hash(step, 902) - 0.5) * 14 : 0;
-			ctx.globalAlpha = a;
-			if (glitch) {
-				ctx.fillStyle = SPLIT[0];
-				ctx.fillRect(bx - 4 + dx, by + 3, bw, bh);
-				ctx.fillStyle = SPLIT[1];
-				ctx.fillRect(bx + 4 - dx, by - 3, bw, bh);
-			}
-			ctx.fillStyle = t.accent;
-			ctx.fillRect(bx + dx, by, bw * Math.min(1, a * 1.4), bh);
-			brackets(ctx, bx - 10, by - 10, bw + 20, bh + 20, a, { color: t.accent, width: 2, len: 14 });
-			mono(ctx, label, bx + dx + (bw - tw) / 2, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.ground, 3, a);
-			const pulse = 0.5 + 0.5 * Math.sin(info.t * 3);
-			mono(ctx, '█', bx + bw + 18, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.accent, 0, a * pulse);
-			ctx.globalAlpha = 1;
+			if (o.typing) typingTeaser(ctx, info.t, o.typing);
+			button(ctx, p, info);
 		},
 	});
 	// generous hit area over the button row
 	s.hotspot({ x, y: y + by - 12, w, h: bh + 24 }, 'read-more', href);
 	s.cursor = y + by + bh + 30;
+
+	function typingTeaser(ctx: CanvasRenderingContext2D, time: number, them: string) {
+		mono(ctx, `> ${them.toUpperCase()} IS TYPING`, x + 4, 10, t.mono(10), CYAN, 3, 0.8);
+		ctx.beginPath();
+		(ctx as any).roundRect(x, 18, 62, 36, [r, r, r, 5]);
+		ctx.fillStyle = '#0d1013';
+		ctx.fill();
+		ctx.strokeStyle = CYAN;
+		ctx.globalAlpha = 0.45;
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+		for (let d = 0; d < 3; d++) {
+			const ph = (time * 2.6 - d * 0.18) % 1;
+			const lift = ph < 0.35 ? Math.sin((ph / 0.35) * Math.PI) : 0;
+			ctx.globalAlpha = 0.45 + lift * 0.55;
+			ctx.fillStyle = CYAN;
+			ctx.beginPath();
+			ctx.arc(x + 17 + d * 14, 36 - lift * 5, 4, 0, Math.PI * 2);
+			ctx.fill();
+		}
+		ctx.globalAlpha = 1;
+	}
+
+	function button(ctx: CanvasRenderingContext2D, p: number, info: { t: number; reduce: boolean }) {
+		const a = Math.min(1, Math.max(0, (p - 0.3) / 0.5));
+		if (a <= 0) return;
+		ctx.save();
+		ctx.font = t.mono(bpx);
+		(ctx as any).letterSpacing = '3px';
+		const tw = ctx.measureText(label).width;
+		(ctx as any).letterSpacing = '0px';
+		ctx.restore();
+		bw = Math.min(w, tw + 48);
+		const bx = x + (w - bw) / 2;
+		const step = Math.floor(info.t * 12);
+		const glitch = !info.reduce && hash(step, 901) < 0.08;
+		const dx = glitch ? (hash(step, 902) - 0.5) * 14 : 0;
+		ctx.globalAlpha = a;
+		if (glitch) {
+			ctx.fillStyle = SPLIT[0];
+			ctx.fillRect(bx - 4 + dx, by + 3, bw, bh);
+			ctx.fillStyle = SPLIT[1];
+			ctx.fillRect(bx + 4 - dx, by - 3, bw, bh);
+		}
+		ctx.fillStyle = t.accent;
+		ctx.fillRect(bx + dx, by, bw * Math.min(1, a * 1.4), bh);
+		brackets(ctx, bx - 10, by - 10, bw + 20, bh + 20, a, { color: t.accent, width: 2, len: 14 });
+		mono(ctx, label, bx + dx + (bw - tw) / 2, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.ground, 3, a);
+		const pulse = 0.5 + 0.5 * Math.sin(info.t * 3);
+		mono(ctx, '█', bx + bw + 18, by + bh / 2 + bpx * 0.36, t.mono(bpx), t.accent, 0, a * pulse);
+		ctx.globalAlpha = 1;
+	}
 }

@@ -31,7 +31,8 @@ const articles = await Promise.all(
 			marginNote: a.data.marginNote ?? null,
 			chatWith: a.data.chatWith ?? null,
 			chatPreview: a.data.chatPreview ?? null,
-			href: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/issues/${issue.dir}/${articleSlug(a)}/`,
+			// "read more" from the editor's view stays in the editor's view
+			href: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/issues/${issue.dir}/${articleSlug(a)}/editor/`,
 			chat: a.data.chat
 				? await Promise.all(
 						a.data.chat.map(async (m) => ({
@@ -185,17 +186,24 @@ const payload = {
 					})),
 				);
 
+				const headPx = C.headlineSize(
+					s,
+					T,
+					data.articles.map((a: { title: string }) => a.title),
+				);
 				for (const a of data.articles) {
 					s.mark(a.slug);
 					C.divider(s, T, { order: a.order, kicker: a.filler ? 'Filler' : a.kicker });
-					C.headline(s, T, a.title);
+					C.headline(s, T, a.title, headPx);
 					if (a.filler) {
 						C.fillerNote(s, T);
 					} else {
 						C.dek(s, T, a.dek);
 						C.byline(s, T, `By ${a.byline}`);
 						if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
-						C.body(s, T, a.blocks);
+						const cut = a.blocks.findIndex((b: { type: string }) => b.type === 'more');
+						C.body(s, T, cut >= 0 ? a.blocks.slice(0, cut) : a.blocks);
+						if (cut >= 0) C.readMore(s, T, a.href);
 						if (a.chat)
 							C.chat(s, T, a.chat, {
 								me: a.byline.split(' ')[0],
@@ -204,7 +212,7 @@ const payload = {
 								moreHref: a.href,
 							});
 						if (a.marginNote) C.marginNote(s, T, a.marginNote);
-						else if (!a.chat && s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
+						else if (!a.chat && cut < 0 && s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
 					}
 					s.gap(s.vh * 0.12);
 				}

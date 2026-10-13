@@ -4,6 +4,7 @@ import IssueMasthead from './IssueMasthead.astro';
 import ArticleBlock from './ArticleBlock.astro';
 import IssueIndex from './IssueIndex.astro';
 import Chat from './Chat.astro';
+import { parseBody } from '../lib/editor/parseBody';
 import { articleSlug, articleOrder, type Issue } from '../lib/issues';
 
 interface Props {
@@ -16,7 +17,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const articles = await Promise.all(
 	issue.articles.map(async (a) => {
 		const { Content } = await render(a);
-		return { data: a.data, slug: articleSlug(a), order: articleOrder(a), Content };
+		// `{/* read-more */}` in the body: show only what's above it here
+		const blocks = parseBody(a.body ?? '');
+		const cut = blocks.findIndex((b) => b.type === 'more');
+		const preview = cut >= 0 ? blocks.slice(0, cut) : null;
+		return { data: a.data, slug: articleSlug(a), order: articleOrder(a), Content, preview };
 	}),
 );
 const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, anchor: a.slug }));
@@ -32,7 +37,7 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 	/>
 
 	{
-		articles.map(({ Content, ...a }) => (
+		articles.map(({ Content, preview, ...a }) => (
 			<ArticleBlock
 				anchor={a.slug}
 				order={a.order}
@@ -47,7 +52,32 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 				tags={a.data.tags}
 				filler={a.data.filler}
 			>
-				<Content />
+				{preview ? (
+					<>
+						{preview.map((b) =>
+							b.type === 'heading' ? (
+								<h3>{b.text}</h3>
+							) : b.type === 'pull' ? (
+								<blockquote>
+									<p>{b.text}</p>
+								</blockquote>
+							) : b.type === 'list' ? (
+								<ul>
+									{b.items.map((it) => (
+										<li>{it}</li>
+									))}
+								</ul>
+							) : b.type === 'para' ? (
+								<p>{b.text}</p>
+							) : null,
+						)}
+						<p class="read-more">
+							<a href={`${base}/issues/${issue.dir}/${a.slug}/`}>[ Read more -&gt; ]</a>
+						</p>
+					</>
+				) : (
+					<Content />
+				)}
 				{a.data.chat && (
 					<Chat
 						me={a.data.byline.split(' ')[0]}
@@ -70,6 +100,9 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 <IssueIndex issueTitle={issue.data.title} issueNo={issue.data.number} items={indexItems} />
 
 <style>
+	.read-more {
+		margin: 2rem 0 0;
+	}
 	.issue-endnote {
 		margin: clamp(3rem, 9vw, 6.5rem) 0 clamp(1.5rem, 4vw, 3rem);
 		padding-top: 1.3rem;

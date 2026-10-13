@@ -1,29 +1,39 @@
 ---
-// Full-page editor-view sheet for a chat piece: the article header, then the
-// whole thread landing bubble by bubble as you scroll.
+// Full-page editor-view sheet for one article: the header, then the whole
+// piece (body, figure, chat thread) inked in as you scroll, in the issue
+// sheet's glitch key.
 import { getImage } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
+import { parseBody } from '../lib/editor/parseBody';
 
 interface Props {
 	article: CollectionEntry<'articles'>;
 	order: number;
 	backHref: string;
 	backLabel: string;
+	/** every title in the issue, so this headline matches their shared size */
+	issueTitles: string[];
 }
-const { article, order, backHref, backLabel } = Astro.props;
+const { article, order, backHref, backLabel, issueTitles } = Astro.props;
 const d = article.data;
+const hero = d.heroImage ? await getImage({ src: d.heroImage, width: 900, format: 'webp' }) : null;
 
 const payload = {
 	order,
 	kicker: d.kicker,
 	title: d.title,
+	issueTitles,
 	dek: d.dek,
 	byline: d.byline,
+	filler: d.filler,
+	heroUrl: hero?.src ?? null,
+	blocks: parseBody(article.body ?? '').filter((b) => b.type !== 'more'),
+	marginNote: d.marginNote ?? null,
 	me: d.byline.split(' ')[0],
 	them: d.chatWith ?? 'Them',
 	backHref,
 	backLabel,
-	seed: `roachworld-chat-${d.title}`,
+	seed: `roachworld-article-${d.title}`,
 	chat: await Promise.all(
 		(d.chat ?? []).map(async (m) => ({
 			from: m.from,
@@ -41,7 +51,7 @@ const payload = {
 };
 ---
 
-<div class="ed-sheet" data-edition-sheet data-chat-sheet>
+<div class="ed-sheet" data-edition-sheet data-article-sheet>
 	<canvas data-sheet></canvas>
 	<div data-sheet-spacer></div>
 	<div class="ed-scan" aria-hidden="true"></div>
@@ -92,7 +102,7 @@ const payload = {
 	import { rule, brackets } from '../lib/editor/glitch';
 	import { T, glitchLayers } from '../lib/editor/theme';
 
-	const root = document.querySelector<HTMLElement>('[data-chat-sheet]');
+	const root = document.querySelector<HTMLElement>('[data-article-sheet]');
 	const dataEl = root?.querySelector<HTMLElement>('[data-editor-data]');
 	if (root && dataEl) {
 		const data = JSON.parse(dataEl.textContent || '{}');
@@ -104,11 +114,15 @@ const payload = {
 				s.push = (el) => push({ ...el, lead: s.vh - el.y - 10, reveal: 1 });
 				s.gap(s.vh * 0.08);
 				C.divider(s, T, { order: data.order, kicker: data.kicker });
-				C.headline(s, T, data.title);
+				C.headline(s, T, data.title, C.headlineSize(s, T, data.issueTitles));
 				C.dek(s, T, data.dek);
 				C.byline(s, T, `By ${data.byline}`);
 				s.push = push;
-				C.chat(s, T, data.chat, { me: data.me, them: data.them });
+				if (data.filler) C.fillerNote(s, T);
+				if (data.heroUrl) C.figure(s, T, { url: data.heroUrl, caption: data.title });
+				C.body(s, T, data.blocks);
+				if (data.chat.length) C.chat(s, T, data.chat, { me: data.me, them: data.them });
+				if (data.marginNote) C.marginNote(s, T, data.marginNote);
 
 				// end: back to the issue
 				const { x, w, edge } = C.contentBox(s);

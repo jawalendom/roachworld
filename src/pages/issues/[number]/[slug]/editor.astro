@@ -1,0 +1,33 @@
+---
+// An article on its own in the editor's view — where the issue sheet's
+// "read more" goes.
+import Edition from '../../../../layouts/Edition.astro';
+import ArticleSheet from '../../../../components/ArticleSheet.astro';
+import EditionToggle from '../../../../components/EditionToggle.astro';
+import { getIssues, articleSlug, articleOrder } from '../../../../lib/issues';
+
+export async function getStaticPaths() {
+	const issues = await getIssues();
+	return issues.flatMap((issue) =>
+		issue.articles.map((article) => ({
+			params: { number: issue.dir, slug: articleSlug(article) },
+			props: { issue, article },
+		})),
+	);
+}
+
+const { issue, article } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const articleHref = `${base}/issues/${issue.dir}/${articleSlug(article)}/`;
+---
+
+<Edition title={article.data.title} description={article.data.dek} image={article.data.heroImage}>
+	<ArticleSheet
+		article={article}
+		order={articleOrder(article)}
+		backHref={`${base}/issues/${issue.dir}/`}
+		backLabel={`Back to Vol ${issue.data.number}`}
+		issueTitles={issue.articles.map((a) => a.data.title)}
+	/>
+	<EditionToggle editorHref={`${articleHref}editor/`} plainHref={articleHref} current="editor" />
+</Edition>
