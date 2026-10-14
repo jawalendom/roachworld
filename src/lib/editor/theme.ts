@@ -18,7 +18,8 @@ export const T: Theme = {
 export const CYAN = '#13e8ff';
 
 /** Animated background + full-frame tears for a sheet in this key. */
-export const glitchLayers: Pick<MountOpts, 'background' | 'post'> = {
+export const glitchLayers: Pick<MountOpts, 'background' | 'post' | 'crt'> = {
 	background: (ctx, info) => glitchField(ctx, info, { colors: [T.accent, T.accent2, CYAN], glyph: T.accent, mono: T.mono }),
 	post: frameTear,
+	crt: { curve: 0.08 },
 };

@@ -5,6 +5,7 @@
 import { fontsReady, onFontsChanged } from '../pretext/fonts';
 import { makeRng, type Rng } from './rng';
 import { crtTile } from './glitch';
+import { makeCrt, type CrtOpts } from './crt';
 
 export interface SheetElement {
 	y: number;
@@ -70,6 +71,8 @@ export interface MountOpts {
 	post?: (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, info: FrameInfo & { dpr: number }) => void;
 	/** animation frame cap (default 30). */
 	fps?: number;
+	/** show the sheet through curved CRT glass. */
+	crt?: CrtOpts;
 }
 
 export function mountSheet(
@@ -83,6 +86,7 @@ export function mountSheet(
 	const canvas = canvasEl;
 	const spacer = spacerEl;
 	const ctx = canvas.getContext('2d')!;
+	const crt = opts.crt ? makeCrt(root, canvas, opts.crt) : null;
 	const reduce =
 		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -113,8 +117,14 @@ export function mountSheet(
 	function hotspotAt(clientX: number, clientY: number): SheetHotspot | null {
 		const rect = canvas.getBoundingClientRect();
 		const sy = Math.max(0, window.scrollY - root.offsetTop);
-		const x = clientX - rect.left;
-		const y = clientY - rect.top + sy;
+		let x = clientX - rect.left;
+		let y = clientY - rect.top;
+		if (crt) {
+			const m = crt.toSource(x, y, rect.width, rect.height);
+			if (!m) return null;
+			[x, y] = m;
+		}
+		y += sy;
 		for (const hs of hotspots) {
 			if (x >= hs.x && x <= hs.x + hs.w && y >= hs.y && y <= hs.y + hs.h) return hs;
 		}
@@ -134,6 +144,7 @@ export function mountSheet(
 		canvas.style.width = `${W}px`;
 		canvas.style.height = `${vh}px`;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		crt?.resize(canvas.width, canvas.height);
 	}
 
 	function build() {
@@ -243,6 +254,7 @@ export function mountSheet(
 			opts.post(ctx, canvas, { ...info, dpr });
 			ctx.restore();
 		}
+		crt?.draw();
 	}
 
 	// continuous loop for the animated layers, capped so it stays cheap
