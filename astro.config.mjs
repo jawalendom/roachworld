@@ -16,6 +16,8 @@ export default defineConfig({
 	site,
 	base,
 	trailingSlash: 'ignore',
+	// the About page used to be called Colophon — keep old links working
+	redirects: { '/colophon': `${base}/about` },
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{

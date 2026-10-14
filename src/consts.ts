@@ -4,14 +4,14 @@ export const SITE_TITLE = 'ROACHWORLD';
 export const SITE_DESCRIPTION =
 	'A personal digital zine, set with pretext — a hand-rolled canvas typesetter.';
 
-// Shown in the cover masthead / colophon.
+// Shown in the cover masthead / about page.
 export const EDITOR = 'Jordan Walendom';
 export const FOUNDED = 2026;
 
 export const NAV = [
 	{ href: '/', label: 'Latest' },
 	{ href: '/archive/', label: 'Archive' },
-	{ href: '/colophon/', label: 'Colophon' },
+	{ href: '/about/', label: 'About' },
 ];
 
 // Risograph ink set. Kept here so the CSS design tokens and the canvas

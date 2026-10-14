@@ -10,7 +10,7 @@ interface Props {
 	description: string;
 	image?: ImageMetadata;
 	issue?: Issue;
-	current?: 'latest' | 'archive' | 'colophon' | null;
+	current?: 'latest' | 'archive' | 'about' | null;
 }
 const { title, description, image, issue, current = null } = Astro.props;
 const base = import.meta.env.BASE_URL;

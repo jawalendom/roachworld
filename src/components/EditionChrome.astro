@@ -1,5 +1,5 @@
 ---
-// Bespoke navigation for the editor's view: Latest / Archive / Colophon and a
+// Bespoke navigation for the editor's view: Latest / Archive / About and a
 // full-screen issue Index, all drawn in the hand-made key of the immersive view
 // rather than the plain-view chrome. Palette + hand marks match src/editors/*.
 import type { Issue } from '../lib/issues';
@@ -8,7 +8,7 @@ import { articleSlug, articleOrder } from '../lib/issues';
 interface Props {
 	issue?: Issue;
 	/** which nav destination is the current page */
-	current?: 'latest' | 'archive' | 'colophon' | null;
+	current?: 'latest' | 'archive' | 'about' | null;
 }
 const { issue, current = null } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -36,7 +36,7 @@ const SCRAWLS = [
 			[
 				{ label: 'Latest', href: `${base}/`, key: 'latest' },
 				{ label: 'Archive', href: `${base}/archive/`, key: 'archive' },
-				{ label: 'Colophon', href: `${base}/colophon/`, key: 'colophon' },
+				{ label: 'About', href: `${base}/about/`, key: 'about' },
 			].map((l, i) => (
 				<a
 					href={l.href}
@@ -85,7 +85,7 @@ const SCRAWLS = [
 
 						<div class="edx-foot">
 							<a href={`${base}/archive/`}>Archive →</a>
-							<a href={`${base}/colophon/`}>Colophon</a>
+							<a href={`${base}/about/`}>About</a>
 							<button type="button" data-index-close>
 								Close ✕
 							</button>

@@ -1,13 +1,19 @@
 ---
+import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import { SITE_TITLE, EDITOR } from '../consts';
+import portrait from '../assets/about-jordan.jpg';
 ---
 
-<Layout title="Colophon" description={`How ${SITE_TITLE} is made.`}>
-	<p class="kicker">Colophon</p>
+<Layout title="About" description={`About ${SITE_TITLE} and how it is made.`}>
+	<p class="kicker">About</p>
 	<h1>How this is set</h1>
 
 	<div class="prose">
+		<figure class="portrait">
+			<Image src={portrait} alt={`${EDITOR}, the editor`} width={1200} />
+			<figcaption>{EDITOR}, editor</figcaption>
+		</figure>
 		<p>
 			<strong>{SITE_TITLE}</strong> is a personal digital zine by {EDITOR}. Every issue
 			is written in Markdown and published as a static site.
@@ -78,6 +84,10 @@ import { SITE_TITLE, EDITOR } from '../consts';
 	}
 	.prose p {
 		margin: 0 0 1.2em;
+	}
+	/* the editor's photo stays in colour (the site greys out prose images) */
+	.prose .portrait :global(img) {
+		filter: none;
 	}
 	.swatches {
 		list-style: none;
