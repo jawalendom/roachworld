@@ -1,0 +1,54 @@
+---
+// The roach, inline. Each part is its own group (.rm-antennae / .rm-head /
+// .rm-body) with its pivot set as transform-origin, so CSS or JS can move,
+// colour or glitch them independently. Colour follows `color` (currentColor).
+import { ROACH_VIEWBOX, ROACH_ANCHORS, ROACH_PARTS, roachPaths, type RoachVariant } from '../lib/brand/roach';
+
+interface Props {
+	/** height, as any CSS length (number = px). Width follows the mark's ratio. */
+	size?: number | string;
+	/** fill colour; default inherits the surrounding text colour */
+	color?: string;
+	/** accessible name; omit when the mark is decorative */
+	label?: string;
+	class?: string;
+	/** 'scratchy' = the drawing as traced (default); 'solid' = scratches filled */
+	variant?: RoachVariant;
+}
+const { size = 48, color, label, class: className, variant } = Astro.props;
+const paths = roachPaths(variant);
+const [x, y, w, h] = ROACH_VIEWBOX;
+const height = typeof size === 'number' ? `${size}px` : size;
+---
+
+<svg
+	class:list={['roach-mark', className]}
+	viewBox={`${x} ${y} ${w} ${h}`}
+	style={`height:${height};${color ? `color:${color};` : ''}`}
+	role={label ? 'img' : undefined}
+	aria-label={label}
+	aria-hidden={label ? undefined : 'true'}
+	xmlns="http://www.w3.org/2000/svg"
+>
+	{
+		ROACH_PARTS.map((part) => (
+			<g class={`rm-${part}`} style={`transform-origin:${ROACH_ANCHORS[part][0]}px ${ROACH_ANCHORS[part][1]}px`}>
+				<path fill-rule="evenodd" d={paths[part]} />
+			</g>
+		))
+	}
+</svg>
+
+<style>
+	.roach-mark {
+		display: inline-block;
+		width: auto;
+		aspect-ratio: 352 / 1530;
+		fill: currentColor;
+		overflow: visible;
+		vertical-align: middle;
+	}
+	.roach-mark g {
+		transform-box: view-box;
+	}
+</style>
