@@ -43,6 +43,20 @@ const articles = defineCollection({
 			chatWith: z.string().optional(),
 			// How many messages the issue page shows before "read more".
 			chatPreview: z.number().int().positive().optional(),
+			// An interactive shelf of CDs (jewel cases you can pull out, turn and
+			// open). `color` is the print colour; `cover` replaces the drawn booklet.
+			cds: z
+				.array(
+					z.object({
+						title: z.string(),
+						artist: z.string(),
+						year: z.string().optional(),
+						color: z.string().default('#00ff9c'),
+						tracks: z.array(z.string()).default([]),
+						cover: image().optional(),
+					}),
+				)
+				.optional(),
 			chat: z
 				.array(
 					z.object({

@@ -1,0 +1,191 @@
+---
+// The interactive CD shelf. `full` fills the viewport (editor view); otherwise
+// it sits inline in an article as a framed panel.
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+
+interface Props {
+	cds: { title: string; artist: string; year?: string; color: string; tracks: string[]; cover?: ImageMetadata }[];
+	full?: boolean;
+	backHref?: string;
+	backLabel?: string;
+	heading?: string;
+}
+const { cds, full = false, backHref, backLabel, heading } = Astro.props;
+const data = await Promise.all(
+	cds.map(async (cd) => ({
+		...cd,
+		cover: cd.cover ? (await getImage({ src: cd.cover, width: 1024, format: 'webp' })).src : null,
+	})),
+);
+---
+
+<div class:list={['shelf', { full }]} data-shelf>
+	<script type="application/json" data-shelf-data set:html={JSON.stringify(data)} />
+	{full && heading && <p class="shelf-head">{heading}</p>}
+	<div class="shelf-label" data-shelf-label hidden></div>
+	<p class="shelf-hint" data-shelf-hint>&gt; loading shelf…</p>
+	<button type="button" class="shelf-back" data-shelf-back hidden>[ &lt;- back to shelf ]</button>
+	{full && backHref && <a class="shelf-exit" href={backHref}>[ &lt;- {backLabel ?? 'back'} ]</a>}
+	<noscript><p class="shelf-hint">The shelf needs JavaScript.</p></noscript>
+</div>
+
+<style>
+	.shelf {
+		position: relative;
+		margin: 2rem 0;
+		aspect-ratio: 16 / 10;
+		min-height: 380px;
+		background: #050506;
+		color: #e6e6e9;
+		border: 1px solid color-mix(in srgb, #00ff9c 35%, transparent);
+		overflow: hidden;
+		font-family: var(--font-mono);
+	}
+	.shelf.full {
+		position: fixed;
+		inset: 0;
+		margin: 0;
+		aspect-ratio: auto;
+		border: 0;
+		z-index: 1;
+	}
+	.shelf::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px);
+	}
+	.shelf.full::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: 70;
+		pointer-events: none;
+		border-radius: clamp(18px, 4.5vw, 54px) / clamp(16px, 4vw, 46px);
+		box-shadow: 0 0 0 200px #000, inset 0 0 clamp(40px, 9vw, 140px) rgba(0, 0, 0, 0.7);
+	}
+	.shelf-head,
+	.shelf-label,
+	.shelf-hint,
+	.shelf-back,
+	.shelf-exit {
+		position: absolute;
+		z-index: 2;
+		margin: 0;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+	}
+	.shelf-head {
+		top: clamp(3.4rem, 9vh, 5rem);
+		left: 50%;
+		transform: translateX(-50%);
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: clamp(1.4rem, 4vw, 2.6rem);
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+		text-shadow: 0.05em 0 #ff2e4d, -0.05em 0 #13e8ff;
+	}
+	.full[data-mode='inspect'] .shelf-head {
+		opacity: 0;
+	}
+	.shelf-head {
+		transition: opacity 0.3s;
+	}
+	@media (max-width: 640px) {
+		.shelf-head {
+			top: 8.2rem;
+		}
+	}
+	.shelf-label {
+		top: 1rem;
+		left: 1rem;
+		display: grid;
+		gap: 0.3rem;
+		font-size: 0.7rem;
+		color: #00ff9c;
+	}
+	.full .shelf-label {
+		top: auto;
+		bottom: clamp(5rem, 14vh, 8rem);
+		left: 50%;
+		transform: translateX(-50%);
+		text-align: center;
+	}
+	.shelf-label :global(b) {
+		font-family: var(--font-display);
+		font-size: 1.4rem;
+		letter-spacing: 0.02em;
+		color: #e6e6e9;
+	}
+	.shelf-hint {
+		left: 1rem;
+		bottom: 1rem;
+		font-size: 0.66rem;
+		color: #5f6068;
+	}
+	.full .shelf-hint {
+		left: 50%;
+		bottom: clamp(3.4rem, 9vh, 5rem);
+		transform: translateX(-50%);
+		white-space: nowrap;
+	}
+	.shelf-back,
+	.shelf-exit {
+		right: 1rem;
+		bottom: 1rem;
+		padding: 0.6rem 0.9rem;
+		font: inherit;
+		font-size: 0.7rem;
+		letter-spacing: 0.2em;
+		color: #050506;
+		background: #00ff9c;
+		border: 0;
+		cursor: pointer;
+		text-decoration: none;
+	}
+	.full .shelf-back {
+		top: clamp(3.4rem, 9vh, 5rem);
+		bottom: auto;
+		right: clamp(1rem, 3vw, 1.6rem);
+	}
+	.shelf-exit {
+		background: none;
+		color: #00ff9c;
+		outline: 1px solid #00ff9c;
+		left: clamp(1rem, 3vw, 1.6rem);
+		right: auto;
+		top: clamp(3.4rem, 9vh, 5rem);
+		bottom: auto;
+	}
+	.shelf-back:hover,
+	.shelf-exit:hover {
+		filter: drop-shadow(-3px 0 0 #ff2e4d) drop-shadow(3px 0 0 #13e8ff);
+	}
+	.shelf-back[hidden],
+	.shelf-label[hidden] {
+		display: none;
+	}
+</style>
+
+<script>
+	import { mountShelf } from '../lib/shelf/shelf';
+	for (const host of document.querySelectorAll<HTMLElement>('[data-shelf]')) {
+		const cds = JSON.parse(host.querySelector('[data-shelf-data]')?.textContent || '[]');
+		mountShelf(
+			host,
+			cds,
+			{
+				label: host.querySelector('[data-shelf-label]')!,
+				hint: host.querySelector('[data-shelf-hint]')!,
+				back: host.querySelector('[data-shelf-back]')!,
+			},
+			{ full: host.classList.contains('full') },
+		).catch(() => {
+			const h = host.querySelector('[data-shelf-hint]');
+			if (h) h.textContent = '> this browser cannot draw the shelf';
+		});
+	}
+</script>

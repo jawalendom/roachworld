@@ -3,6 +3,7 @@
 // "read more" goes.
 import Edition from '../../../../layouts/Edition.astro';
 import ArticleSheet from '../../../../components/ArticleSheet.astro';
+import CdShelf from '../../../../components/CdShelf.astro';
 import EditionToggle from '../../../../components/EditionToggle.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../../lib/issues';
 
@@ -22,12 +23,22 @@ const articleHref = `${base}/issues/${issue.dir}/${articleSlug(article)}/`;
 ---
 
 <Edition title={article.data.title} description={article.data.dek} image={article.data.heroImage}>
-	<ArticleSheet
-		article={article}
-		order={articleOrder(article)}
-		backHref={`${base}/issues/${issue.dir}/`}
-		backLabel={`Back to Vol ${issue.data.number}`}
-		issueTitles={issue.articles.map((a) => a.data.title)}
-	/>
+	{article.data.cds ? (
+		<CdShelf
+			cds={article.data.cds}
+			full
+			heading={article.data.title}
+			backHref={`${base}/issues/${issue.dir}/`}
+			backLabel={`Back to Vol ${issue.data.number}`}
+		/>
+	) : (
+		<ArticleSheet
+			article={article}
+			order={articleOrder(article)}
+			backHref={`${base}/issues/${issue.dir}/`}
+			backLabel={`Back to Vol ${issue.data.number}`}
+			issueTitles={issue.articles.map((a) => a.data.title)}
+		/>
+	)}
 	<EditionToggle editorHref={`${articleHref}editor/`} plainHref={articleHref} current="editor" />
 </Edition>
