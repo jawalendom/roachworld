@@ -45,15 +45,24 @@ const articles = defineCollection({
 			chatPreview: z.number().int().positive().optional(),
 			// An interactive shelf of CDs (jewel cases you can pull out, turn and
 			// open). `color` is the print colour; `cover` replaces the drawn booklet.
+			shelfSubtitle: z.string().optional(),
 			cds: z
 				.array(
 					z.object({
 						title: z.string(),
 						artist: z.string(),
+						spineArtist: z.string().optional(),
 						year: z.string().optional(),
 						color: z.string().default('#00ff9c'),
 						tracks: z.array(z.string()).default([]),
 						cover: image().optional(),
+						// liner-note pamphlet that pops up when the case is opened
+						quote: z.string().optional(),
+						notes: z.string().optional(),
+						// a stretch of the song played while it's open; `src` is a file in public/
+						clip: z
+							.object({ src: z.string(), start: z.number().default(0), end: z.number().optional() })
+							.optional(),
 					}),
 				)
 				.optional(),

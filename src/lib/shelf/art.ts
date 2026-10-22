@@ -9,6 +9,7 @@ import { hash } from '../editor/glitch';
 export interface Cd {
 	title: string;
 	artist: string;
+	spineArtist?: string; // shorter credit for the spine, else `artist`
 	year?: string;
 	color: string; // main print colour
 	tracks: string[];
@@ -108,8 +109,9 @@ export function spineArt(cd: Cd, i: number): HTMLCanvasElement {
 	g.fillText(title, 0, 0);
 	g.font = FONT.mono(26);
 	g.fillStyle = cd.color;
-	const tw = g.measureText(cd.artist.toUpperCase()).width;
-	g.fillText(cd.artist.toUpperCase(), Math.min(680, 640) + 20, 0);
+	const artist = (cd.spineArtist ?? cd.artist).toUpperCase();
+	const tw = g.measureText(artist).width;
+	g.fillText(artist, Math.min(680, 640) + 20, 0);
 	g.restore();
 	g.save();
 	g.translate(w / 2, h - 44);
@@ -200,6 +202,40 @@ export function discArt(cd: Cd, i: number): HTMLCanvasElement {
 	g.beginPath();
 	g.arc(R, R, R * 0.3, 0, Math.PI * 2);
 	g.fill();
+	g.fillStyle = INK;
+	g.beginPath();
+	g.arc(R, R, R * 0.12, 0, Math.PI * 2);
+	g.fill();
+	return c;
+}
+
+/** Disc printed full-bleed with the cover art (a picture disc): mirror rim,
+ *  clear hub, centre hole. */
+export function pictureDisc(cover: HTMLCanvasElement): HTMLCanvasElement {
+	const S = 1024, R = S / 2;
+	const [c, g] = make(S, S);
+	const ring = g.createRadialGradient(R, R, R * 0.2, R, R, R);
+	ring.addColorStop(0, '#9aa0a8');
+	ring.addColorStop(0.6, '#eef1f6');
+	ring.addColorStop(1, '#8a8f98');
+	g.fillStyle = ring;
+	g.fillRect(0, 0, S, S);
+	g.save();
+	g.beginPath();
+	g.arc(R, R, R * 0.965, 0, Math.PI * 2);
+	g.clip();
+	g.drawImage(cover, 0, 0, S, S);
+	g.restore();
+	// clear hub ring + stacking ring + hole
+	g.fillStyle = 'rgba(205,210,218,0.92)';
+	g.beginPath();
+	g.arc(R, R, R * 0.3, 0, Math.PI * 2);
+	g.fill();
+	g.strokeStyle = 'rgba(120,125,135,0.8)';
+	g.lineWidth = 6;
+	g.beginPath();
+	g.arc(R, R, R * 0.24, 0, Math.PI * 2);
+	g.stroke();
 	g.fillStyle = INK;
 	g.beginPath();
 	g.arc(R, R, R * 0.12, 0, Math.PI * 2);
