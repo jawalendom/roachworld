@@ -1,0 +1,514 @@
+---
+// A die-cut holographic sticker of the roach mark, stuck on the issue page's
+// glass: it stays put on screen while the page scrolls under it. Chrome-holo
+// foil in the zine's glitch green that shifts as you tilt it. Grab it and the
+// edge under your finger curls back (the paper backing shows on the flap); drag
+// it about, let go and it lays flat where you dropped it. It turns as you carry
+// it — held off-centre it swings round to trail behind, like a real sticker held
+// by a corner — and a second finger (or the scroll wheel while held) twists it. It's on every page,
+// and where you leave it carries across pages for the rest of the visit.
+//
+// The curl: the sticker folds along a line across the grab direction. The front
+// is clipped to the side that stays down; the flap is the same shape mirrored
+// across that line, showing the backing, with shading toward the crease.
+import { ROACH_VIEWBOX, ROACH_SOLID_PATHS, ROACH_PARTS } from '../lib/brand/roach';
+
+const [vx, vy, vw, vh] = ROACH_VIEWBOX;
+const PAD = 70; // room for the die-cut border, in source px
+const box = [vx - PAD, vy - PAD, vw + PAD * 2, vh + PAD * 2];
+const d = ROACH_PARTS.map((p) => ROACH_SOLID_PATHS[p]).join(' ');
+const svg = (body: string) =>
+	`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.join(' ')}">${body}</svg>`;
+// the die-cut: the mark grown by a fat round stroke, which also bridges the
+// gaps between antennae, head and body into one sticker
+const cut = svg(
+	`<path d="${d}" fill="#fff" stroke="#fff" stroke-width="${PAD * 1.6}" stroke-linejoin="round" stroke-linecap="round"/>`,
+);
+const ink = svg(`<path d="${d}" fill-rule="evenodd" fill="#000"/>`);
+const url = (s: string) => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+const aspect = box[2] / box[3];
+---
+
+<div
+	class="holo"
+	data-holo
+	style={`--cut: ${url(cut)}; --ink: ${url(ink)}; --aspect: ${aspect};`}
+	role="img"
+	aria-label="Roachworld sticker. Drag to peel it off and move it."
+>
+	<div class="holo-lift">
+		<div class="holo-shadow"></div>
+		<div class="holo-card" data-holo-front>
+			<div class="holo-foil"></div>
+			<div class="holo-bands"></div>
+			<div class="holo-glitter"></div>
+			<div class="holo-ink holo-ink--r"></div>
+			<div class="holo-ink holo-ink--c"></div>
+			<div class="holo-ink"></div>
+			<div class="holo-glare"></div>
+			<div class="holo-crease" data-holo-crease></div>
+		</div>
+		<div class="holo-flap" data-holo-flap>
+			<div class="holo-back" data-holo-back></div>
+		</div>
+	</div>
+</div>
+
+<style>
+	.holo {
+		--h: clamp(200px, 38vh, 330px);
+		--x: 0px;
+		--y: 0px;
+		--rot: -22deg;
+		--mx: 0.5;
+		--my: 0.5;
+		--tx: 0deg;
+		--ty: 0deg;
+		--lift: 0;
+		position: fixed; /* stuck to the glass, not the page — same spot on every page */
+		z-index: 6; /* over the scanlines, under the bezel */
+		top: 50vh;
+		right: clamp(1.2rem, 9vw, 9rem);
+		height: var(--h);
+		aspect-ratio: var(--aspect);
+		translate: var(--x) var(--y);
+		rotate: var(--rot);
+		touch-action: none;
+		cursor: grab;
+		user-select: none;
+		-webkit-user-select: none;
+		perspective: 700px;
+	}
+	.holo.is-lifted {
+		cursor: grabbing;
+	}
+	.holo-lift {
+		position: absolute;
+		inset: 0;
+		transform-style: preserve-3d;
+		transform: rotateX(var(--ty)) rotateY(var(--tx)) translateZ(calc(var(--lift) * 40px)) scale(calc(1 + var(--lift) * 0.07));
+		transition: transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+	}
+	.holo.is-lifted .holo-lift,
+	.holo.is-hover .holo-lift {
+		transition: transform 0.12s ease-out;
+	}
+	/* every layer is cut to the sticker's shape */
+	.holo-card,
+	.holo-shadow {
+		position: absolute;
+		inset: 0;
+		-webkit-mask: var(--cut) center / 100% 100% no-repeat;
+		mask: var(--cut) center / 100% 100% no-repeat;
+	}
+	.holo-card > * {
+		position: absolute;
+		inset: 0;
+	}
+	/* the curled-back flap: the backing paper, mirrored across the crease */
+	.holo-flap {
+		position: absolute;
+		inset: 0;
+		transform-origin: 0 0;
+		pointer-events: none;
+		filter: drop-shadow(-3px 6px 6px rgba(0, 0, 0, 0.55));
+		display: none;
+	}
+	.holo.is-curled .holo-flap {
+		display: block;
+	}
+	.holo-back {
+		position: absolute;
+		inset: 0;
+		-webkit-mask: var(--cut) center / 100% 100% no-repeat;
+		mask: var(--cut) center / 100% 100% no-repeat;
+		/* silver-white backing, darker into the crease where it curls */
+		/* --c0 is the crease, --c1 the tip of the flap, along the gradient */
+		background:
+			linear-gradient(
+				var(--crease-dir, 90deg),
+				rgba(0, 0, 0, 0) var(--c0, 0%),
+				rgba(0, 0, 0, 0.5) var(--c0, 0%),
+				rgba(0, 0, 0, 0.12) calc(var(--c0, 0%) + (var(--c1, 100%) - var(--c0, 0%)) * 0.3),
+				rgba(255, 255, 255, 0.55) calc(var(--c0, 0%) + (var(--c1, 100%) - var(--c0, 0%)) * 0.55),
+				rgba(0, 0, 0, 0.05) var(--c1, 100%)
+			),
+			repeating-linear-gradient(45deg, #e4e8e4 0 3px, #d6dbd7 3px 6px);
+	}
+	/* a soft highlight on the front just before the crease, where it lifts */
+	.holo-crease {
+		background: linear-gradient(var(--crease-front, 90deg), rgba(0, 0, 0, 0) 70%, rgba(255, 255, 255, 0.35) 92%, rgba(0, 0, 0, 0.35) 100%);
+		mix-blend-mode: overlay;
+		opacity: 0;
+	}
+	.holo.is-curled .holo-crease {
+		opacity: 1;
+	}
+	/* contact shadow when stuck down; a soft drop when lifted */
+	.holo-shadow {
+		background: #000;
+		opacity: calc(0.55 - var(--lift) * 0.25);
+		filter: blur(calc(2px + var(--lift) * 10px));
+		translate: calc(3px + var(--lift) * 12px) calc(5px + var(--lift) * 22px);
+		transform: translateZ(-1px);
+	}
+	/* chrome holo foil: glitch green running into cyan and a flash of lilac,
+	   sliding as the light moves */
+	.holo-foil {
+		background:
+			linear-gradient(
+				115deg,
+				#063d27 0%,
+				#00ff9c 12%,
+				#d9fff0 20%,
+				#00e58c 28%,
+				#13e8ff 36%,
+				#00ff9c 44%,
+				#0b7a50 50%,
+				#00ff9c 56%,
+				#c8b8ff 61%,
+				#00ff9c 66%,
+				#f2fff9 74%,
+				#00d27f 82%,
+				#13e8ff 90%,
+				#063d27 100%
+			)
+			calc(var(--mx) * 100%) calc(var(--my) * 100%) / 340% 340%;
+	}
+	/* fine diffraction bands */
+	.holo-bands {
+		background: repeating-linear-gradient(
+				calc(60deg + (var(--mx) - 0.5) * 50deg),
+				rgba(255, 255, 255, 0) 0 5px,
+				rgba(255, 255, 255, 0.35) 6px,
+				rgba(255, 255, 255, 0) 8px 12px
+			)
+			calc(var(--mx) * 60px) 0;
+		mix-blend-mode: overlay;
+		opacity: 0.7;
+	}
+	/* glitter flakes that wink as the angle changes */
+	.holo-glitter {
+		background:
+			radial-gradient(circle at 20% 30%, #fff 0 0.6px, transparent 1.2px) 0 0 / 7px 9px,
+			radial-gradient(circle at 70% 60%, #fff 0 0.5px, transparent 1px) 3px 4px / 11px 8px;
+		mix-blend-mode: color-dodge;
+		opacity: calc(0.25 + (var(--mx) - 0.5) * (var(--mx) - 0.5) * 2.4);
+	}
+	/* the mark printed in ink, with the zine's red / cyan misregistration */
+	.holo-ink {
+		background: #050506;
+		-webkit-mask: var(--ink) center / 100% 100% no-repeat;
+		mask: var(--ink) center / 100% 100% no-repeat;
+	}
+	.holo-ink--r {
+		background: #ff2e4d;
+		translate: calc(-2px - (var(--mx) - 0.5) * 6px) 1px;
+		opacity: 0.7;
+	}
+	.holo-ink--c {
+		background: #13e8ff;
+		translate: calc(2px + (var(--mx) - 0.5) * 6px) -1px;
+		opacity: 0.85;
+	}
+	/* a hard glare that follows the pointer */
+	.holo-glare {
+		background: radial-gradient(
+			circle at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+			rgba(255, 255, 255, 0.85) 0%,
+			rgba(255, 255, 255, 0.25) 18%,
+			rgba(255, 255, 255, 0) 45%
+		);
+		mix-blend-mode: soft-light;
+	}
+	/* idle: the light drifts on its own so the foil never sits still */
+	@media (prefers-reduced-motion: no-preference) {
+		.holo:not(.is-hover):not(.is-lifted) {
+			animation: holo-drift 7s ease-in-out infinite alternate;
+		}
+	}
+	@property --mx {
+		syntax: '<number>';
+		inherits: true;
+		initial-value: 0.5;
+	}
+	@property --my {
+		syntax: '<number>';
+		inherits: true;
+		initial-value: 0.5;
+	}
+	@keyframes holo-drift {
+		0% { --mx: 0.15; --my: 0.2; }
+		50% { --mx: 0.75; --my: 0.55; }
+		100% { --mx: 0.4; --my: 0.9; }
+	}
+	@media (max-width: 640px) {
+		.holo {
+			--h: clamp(130px, 22vh, 190px);
+			top: calc(100vh * 0.56);
+			right: 2.6rem;
+		}
+	}
+</style>
+
+<script>
+	const KEY = 'roachworld:sticker';
+	for (const el of document.querySelectorAll<HTMLElement>('[data-holo]')) {
+		const front = el.querySelector<HTMLElement>('[data-holo-front]')!;
+		const flap = el.querySelector<HTMLElement>('[data-holo-flap]')!;
+		const back = el.querySelector<HTMLElement>('[data-holo-back]')!;
+		const set = (k: string, v: string | number) => el.style.setProperty(k, String(v));
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		// where it sits on screen, as an offset from its starting spot, and its angle
+		const ROT0 = -22;
+		let pos = { x: 0, y: 0 };
+		let rot = ROT0;
+		try {
+			const saved = JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
+			if (saved && typeof saved.x === 'number') pos = { x: saved.x, y: saved.y };
+			if (saved && typeof saved.rot === 'number') rot = saved.rot;
+		} catch {}
+		const place = () => {
+			set('--x', `${pos.x}px`);
+			set('--y', `${pos.y}px`);
+			set('--rot', `${rot.toFixed(2)}deg`);
+		};
+		const save = () => {
+			try {
+				sessionStorage.setItem(KEY, JSON.stringify({ ...pos, rot }));
+			} catch {}
+		};
+		// screen centre of the sticker (its rotation pivot)
+		const centre = () => {
+			const r = el.getBoundingClientRect();
+			return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+		};
+		// turn by `deg` about screen point (px, py): the centre swings round it
+		const turnAbout = (deg: number, px: number, py: number) => {
+			const c = centre();
+			const a = (deg * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
+			const vx = c.x - px, vy = c.y - py;
+			pos = { x: pos.x + (px + vx * cs - vy * sn - c.x), y: pos.y + (py + vx * sn + vy * cs - c.y) };
+			rot += deg;
+		};
+		const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+		// keep it on screen if the window shrinks (at least a third of it showing)
+		const keepOn = () => {
+			const r = el.getBoundingClientRect();
+			const m = Math.min(r.width, r.height) / 3;
+			const dx = r.right < m ? m - r.right : r.left > innerWidth - m ? innerWidth - m - r.left : 0;
+			const dy = r.bottom < m ? m - r.bottom : r.top > innerHeight - m ? innerHeight - m - r.top : 0;
+			if (dx || dy) {
+				pos = { x: pos.x + dx, y: pos.y + dy };
+				place();
+				save();
+			}
+		};
+		place();
+		requestAnimationFrame(keepOn);
+		addEventListener('resize', keepOn);
+
+		// light + tilt from where the pointer is over the sticker
+		const aim = (e: PointerEvent, strength = 1) => {
+			const r = el.getBoundingClientRect();
+			const mx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+			const my = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+			set('--mx', mx.toFixed(3));
+			set('--my', my.toFixed(3));
+			set('--tx', `${((mx - 0.5) * 30 * strength).toFixed(2)}deg`);
+			set('--ty', `${(-(my - 0.5) * 30 * strength).toFixed(2)}deg`);
+		};
+		const rest = () => {
+			set('--tx', '0deg');
+			set('--ty', '0deg');
+			el.style.removeProperty('--mx');
+			el.style.removeProperty('--my');
+		};
+
+		// ── the curl ────────────────────────────────────────────────────────
+		// grab point → the edge it's nearest (along the ray from the centre),
+		// and the fold line sits `amt` of the way back toward the centre
+		let grab = { x: 0, y: 0 }; // sticker-local, unrotated
+		let amt = 0, target = 0, raf = 0;
+		const toLocal = (cx: number, cy: number) => {
+			const r = el.getBoundingClientRect();
+			const W = el.offsetWidth, H = el.offsetHeight;
+			const rot = (parseFloat(getComputedStyle(el).rotate) || 0) * (Math.PI / 180);
+			const dx = cx - (r.left + r.width / 2), dy = cy - (r.top + r.height / 2);
+			const c = Math.cos(-rot), s = Math.sin(-rot);
+			return { x: dx * c - dy * s + W / 2, y: dx * s + dy * c + H / 2 };
+		};
+		// a half-plane cut out of the box, as a polygon (for clip-path)
+		const halfPlane = (W: number, H: number, L: { x: number; y: number }, n: { x: number; y: number }, keep: 1 | -1) => {
+			const pts = [
+				{ x: -W, y: -H },
+				{ x: 2 * W, y: -H },
+				{ x: 2 * W, y: 2 * H },
+				{ x: -W, y: 2 * H },
+			];
+			const side = (p: { x: number; y: number }) => ((p.x - L.x) * n.x + (p.y - L.y) * n.y) * keep;
+			const out: { x: number; y: number }[] = [];
+			for (let i = 0; i < pts.length; i++) {
+				const a = pts[i], b = pts[(i + 1) % pts.length];
+				const sa = side(a), sb = side(b);
+				if (sa <= 0) out.push(a);
+				if ((sa <= 0) !== (sb <= 0)) {
+					const t = sa / (sa - sb);
+					out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+				}
+			}
+			return `polygon(${out.map((p) => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',')})`;
+		};
+		const drawCurl = () => {
+			if (amt < 0.004) {
+				el.classList.remove('is-curled');
+				front.style.clipPath = '';
+				return;
+			}
+			el.classList.add('is-curled');
+			const W = el.offsetWidth, H = el.offsetHeight;
+			const C = { x: W / 2, y: H / 2 };
+			let n = { x: grab.x - C.x, y: grab.y - C.y };
+			const len = Math.hypot(n.x, n.y) || 1;
+			n = { x: n.x / len, y: n.y / len };
+			// the box edge in that direction
+			const reach = Math.min(Math.abs(n.x) > 1e-3 ? W / 2 / Math.abs(n.x) : Infinity, Math.abs(n.y) > 1e-3 ? H / 2 / Math.abs(n.y) : Infinity);
+			// fold up to ~45% of the way in from the edge
+			const L = { x: C.x + n.x * reach * (1 - amt * 0.45), y: C.y + n.y * reach * (1 - amt * 0.45) };
+			// front keeps the near side of the crease
+			front.style.clipPath = halfPlane(W, H, L, n, 1);
+			// flap: the far side, mirrored across the crease
+			back.style.clipPath = halfPlane(W, H, L, n, -1);
+			const k = L.x * n.x + L.y * n.y;
+			const a = 1 - 2 * n.x * n.x, b = -2 * n.x * n.y, d = 1 - 2 * n.y * n.y;
+			flap.style.transform = `matrix(${a},${b},${b},${d},${2 * k * n.x},${2 * k * n.y})`;
+			// shading runs across the crease, outward toward the flap's tip: place the
+			// stops in % of the gradient line (the box's extent along n)
+			const deg = (Math.atan2(n.y, n.x) * 180) / Math.PI + 90;
+			const G = Math.abs(W * n.x) + Math.abs(H * n.y);
+			const along = (q: { x: number; y: number }) => (((q.x - C.x) * n.x + (q.y - C.y) * n.y + G / 2) / G) * 100;
+			back.style.setProperty('--crease-dir', `${deg}deg`);
+			back.style.setProperty('--c0', `${along(L).toFixed(1)}%`);
+			back.style.setProperty('--c1', `${Math.min(100, along({ x: C.x + n.x * reach, y: C.y + n.y * reach })).toFixed(1)}%`);
+			front.style.setProperty('--crease-front', `${deg}deg`);
+		};
+		const animate = () => {
+			cancelAnimationFrame(raf);
+			const step = () => {
+				amt += (target - amt) * (reduce ? 1 : 0.22);
+				if (Math.abs(target - amt) < 0.002) amt = target;
+				drawCurl();
+				if (amt !== target) raf = requestAnimationFrame(step);
+			};
+			raf = requestAnimationFrame(step);
+		};
+
+		el.addEventListener('pointerenter', (e) => {
+			if (e.pointerType === 'mouse') el.classList.add('is-hover');
+		});
+		el.addEventListener('pointermove', (e) => {
+			if (!drag && e.pointerType === 'mouse') aim(e);
+		});
+		el.addEventListener('pointerleave', () => {
+			if (drag) return;
+			el.classList.remove('is-hover');
+			rest();
+		});
+
+		// peel: press curls the grabbed edge up and lifts it, drag carries it,
+		// release lays it flat right there
+		let drag: { id: number; x: number; y: number; vx: number } | null = null;
+		// a second finger, for twisting
+		let twist: { id: number; x: number; y: number } | null = null;
+		el.addEventListener('pointerdown', (e) => {
+			e.preventDefault();
+			el.setPointerCapture(e.pointerId);
+			if (drag) {
+				if (!twist && e.pointerId !== drag.id) twist = { id: e.pointerId, x: e.clientX, y: e.clientY };
+				return;
+			}
+			drag = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: 0 };
+			grab = toLocal(e.clientX, e.clientY);
+			el.classList.add('is-lifted');
+			set('--lift', 1);
+			aim(e, 0.35);
+			target = 1;
+			animate();
+		});
+		el.addEventListener('pointermove', (e) => {
+			if (!drag) return;
+			if (twist && e.pointerId === twist.id) {
+				// two fingers: turn by the change in angle between them, about the first
+				const a0 = Math.atan2(twist.y - drag.y, twist.x - drag.x);
+				const a1 = Math.atan2(e.clientY - drag.y, e.clientX - drag.x);
+				twist = { id: twist.id, x: e.clientX, y: e.clientY };
+				turnAbout((wrap(a1 - a0) * 180) / Math.PI, drag.x, drag.y);
+				place();
+				return;
+			}
+			if (e.pointerId !== drag.id) return;
+			const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+			drag.vx = dx;
+			pos = { x: pos.x + dx, y: pos.y + dy };
+			drag.x = e.clientX;
+			drag.y = e.clientY;
+			// held off-centre, it swings round to trail behind the pull
+			const move = Math.hypot(dx, dy);
+			if (!twist && move > 0.5) {
+				const c = centre();
+				const vx = c.x + dx - e.clientX, vy = c.y + dy - e.clientY; // grab → centre, after the move
+				const arm = Math.hypot(vx, vy);
+				if (arm > 12) {
+					const want = Math.atan2(-dy, -dx), now = Math.atan2(vy, vx);
+					const d = wrap(want - now) * Math.min(1, move / arm) * 0.35 * Math.min(1, arm / 60);
+					turnAbout((d * 180) / Math.PI, e.clientX - dx, e.clientY - dy);
+				}
+			}
+			place();
+			// it swings with the motion, like a sticker held by one corner
+			set('--tx', `${Math.max(-30, Math.min(30, drag.vx * 2)).toFixed(2)}deg`);
+			set('--ty', `${Math.max(-20, Math.min(20, -(e.movementY || 0) * 1.4)).toFixed(2)}deg`);
+			set('--mx', (0.5 + Math.max(-0.5, Math.min(0.5, drag.vx / 30))).toFixed(3));
+		});
+		// scroll wheel while it's held: twist it about the grab point
+		el.addEventListener(
+			'wheel',
+			(e) => {
+				if (!drag) return;
+				e.preventDefault();
+				turnAbout(e.deltaY * 0.15, drag.x, drag.y);
+				place();
+			},
+			{ passive: false },
+		);
+		const drop = (e: PointerEvent) => {
+			if (twist && e.pointerId === twist.id) {
+				twist = null;
+				save();
+				return;
+			}
+			if (!drag || e.pointerId !== drag.id) return;
+			drag = null;
+			twist = null;
+			el.classList.remove('is-lifted', 'is-hover');
+			set('--lift', 0);
+			rest();
+			target = 0;
+			animate();
+			keepOn();
+			save();
+		};
+		el.addEventListener('pointerup', drop);
+		el.addEventListener('pointercancel', drop);
+		// double-click / double-tap puts it back where it came from
+		el.addEventListener('dblclick', () => {
+			pos = { x: 0, y: 0 };
+			rot = ROT0;
+			place();
+			try {
+				sessionStorage.removeItem(KEY);
+			} catch {}
+		});
+	}
+</script>
