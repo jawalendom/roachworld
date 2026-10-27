@@ -6,8 +6,10 @@
 // it about, let go and it lays flat where you dropped it. It turns as you carry
 // it — held off-centre it swings round to trail behind, like a real sticker held
 // by a corner — and a second finger (or the scroll wheel while held) twists it.
-// It lives on the issue page's cover: it can be moved anywhere above the
-// contents line, and starts fresh on each visit to the page.
+// It lives on the issue page itself, not the screen: drop it on an article and
+// it stays on that article, scrolling away with it. Carry it towards the top or
+// bottom edge and the page scrolls so it can go anywhere in the issue. It starts
+// fresh on each visit to the page.
 //
 // The curl: the sticker folds along a line across the grab direction. The front
 // is clipped to the side that stays down; the flap is the same shape mirrored
@@ -393,12 +395,9 @@ const aspect = box[2] / box[3];
 			rot += deg;
 		};
 		const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
-		// confine it to the cover: above the contents line, inside the page width
+		// keep it on the page: within the issue's length and the page width
 		const sheetEl = el.closest<HTMLElement>('[data-edition-sheet]');
-		const limit = () => {
-			const y = (sheetEl as any)?.__editionAnchors?.['contents-line'];
-			return typeof y === 'number' ? y - 8 : Infinity;
-		};
+		const limit = () => sheetEl?.offsetHeight || Infinity;
 		const keepOn = () => {
 			const host = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? { top: 0, left: 0 };
 			const r = el.getBoundingClientRect();
@@ -617,6 +616,7 @@ const aspect = box[2] / box[3];
 				return;
 			}
 			drag = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: 0 };
+			edgeScroll();
 			grab = toLocal(e.clientX, e.clientY);
 			el.classList.add('is-lifted');
 			set('--lift', 1);
@@ -673,6 +673,30 @@ const aspect = box[2] / box[3];
 			},
 			{ passive: false },
 		);
+		// carried near the top / bottom of the window, the page scrolls under it and
+		// the sticker comes along, so it can be put anywhere in the issue
+		let edgeRaf = 0;
+		function edgeScroll() {
+			cancelAnimationFrame(edgeRaf);
+			const tick = () => {
+				if (!drag) return;
+				const zone = Math.min(110, innerHeight * 0.14);
+				const y = drag.y;
+				const v = y < zone ? -(1 - y / zone) : y > innerHeight - zone ? 1 - (innerHeight - y) / zone : 0;
+				if (v) {
+					const before = window.scrollY;
+					window.scrollBy(0, v * v * Math.sign(v) * 22);
+					const moved = window.scrollY - before;
+					if (moved) {
+						pos = { x: pos.x, y: pos.y + moved };
+						place();
+						keepOn();
+					}
+				}
+				edgeRaf = requestAnimationFrame(tick);
+			};
+			edgeRaf = requestAnimationFrame(tick);
+		}
 		const drop = (e: PointerEvent) => {
 			if (twist && e.pointerId === twist.id) {
 				twist = null;
@@ -681,6 +705,7 @@ const aspect = box[2] / box[3];
 			if (!drag || e.pointerId !== drag.id) return;
 			drag = null;
 			twist = null;
+			cancelAnimationFrame(edgeRaf);
 			el.classList.remove('is-lifted', 'is-hover');
 			set('--lift', 0);
 			rest();
