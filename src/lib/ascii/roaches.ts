@@ -22,7 +22,7 @@ export interface AsciiRoaches {
 	setSize(px: number): void;
 }
 
-export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; count?: number; strip?: boolean } = {}): Promise<AsciiRoaches> {
+export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; count?: number; strip?: boolean; onSquash?: (n: number) => void } = {}): Promise<AsciiRoaches> {
 	await fontsReady();
 	const canvas = document.createElement('canvas');
 	canvas.setAttribute('aria-hidden', 'true');
@@ -33,9 +33,10 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 	const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 	// strip: a short band on the issue page — a few roaches, mostly crossing
 	// left ↔ right, at one fixed size
-	const field = createRoachField(o.strip ? { count: 3, horizontal: true } : { count: o.count });
+	const field = createRoachField(o.strip ? { count: 3, horizontal: true, dots: false } : { count: o.count, dots: false });
 
 	let size = o.size ?? 40;
+	const GRID = o.strip ? 32 : 48;
 	let cw = 0, ch = 0, cols = 0, rows = 0, dpr = 1;
 	let refCols = 1, refRows = 1;
 	let atlas: HTMLCanvasElement | null = null;
@@ -60,6 +61,9 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 		refCols = w / unit;
 		refRows = h / unit;
 		field.setGrid(cols, rows, refCols, refRows);
+		// a fixed grey grid behind it all (48 css px full screen, 32 in the strip),
+		// whatever the character size
+		glg?.setLines(GRID * dpr, Math.max(1, dpr), [0.12, 0.12, 0.135]);
 		field.setZoom(zoomedOut());
 		buildAtlas();
 	}
@@ -88,6 +92,12 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 		g.setTransform(1, 0, 0, 1, 0, 0);
 		g.fillStyle = BG;
 		g.fillRect(0, 0, canvas.width, canvas.height);
+		{
+			g.fillStyle = '#1e1e22';
+			const gap = GRID * dpr, lw = Math.max(1, dpr);
+			for (let x = 0; x < canvas.width; x += gap) g.fillRect(x, 0, lw, canvas.height);
+			for (let y = 0; y < canvas.height; y += gap) g.fillRect(0, y, canvas.width, lw);
+		}
 		const aw = Math.ceil(cw * dpr), ah = Math.ceil(ch * dpr);
 		for (let n = 0; n < cols * rows; n++) {
 			const c = n * 3;
@@ -100,14 +110,32 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 
 	// squash: tap/click a roach. Nearby ones bolt.
 	canvas.style.cursor = 'crosshair';
-	canvas.addEventListener('pointerdown', (e) => {
+	let squashed = 0;
+	const squashAt = (e: PointerEvent) => {
 		const box = canvas.getBoundingClientRect();
 		const x = ((e.clientX - box.left) / box.width) * refCols;
 		const y = ((e.clientY - box.top) / box.height) * refRows;
 		// generous on touch: a fingertip is big next to a small roach
-		if (field.squash(x, y, e.pointerType === 'touch' ? 4 : 1.5, clock))
-			host.dataset.squashed = String(Number(host.dataset.squashed ?? 0) + 1);
+		if (field.squash(x, y, e.pointerType === 'touch' ? 4 : 1.5, clock)) {
+			host.dataset.squashed = String(++squashed);
+			o.onSquash?.(squashed);
+		}
+	};
+	// mouse/pen squash on press; a finger squashes on lift, and only if it didn't
+	// drag (a drag zooms on phones)
+	let touch: { x: number; y: number; moved: boolean } | null = null;
+	canvas.addEventListener('pointerdown', (e) => {
+		if (e.pointerType !== 'touch') return squashAt(e);
+		touch = { x: e.clientX, y: e.clientY, moved: false };
 	});
+	canvas.addEventListener('pointermove', (e) => {
+		if (touch && Math.hypot(e.clientX - touch.x, e.clientY - touch.y) > 10) touch.moved = true;
+	});
+	canvas.addEventListener('pointerup', (e) => {
+		if (e.pointerType === 'touch' && touch && !touch.moved) squashAt(e);
+		touch = null;
+	});
+	canvas.addEventListener('pointercancel', () => (touch = null));
 
 	measure();
 	new ResizeObserver(measure).observe(host);

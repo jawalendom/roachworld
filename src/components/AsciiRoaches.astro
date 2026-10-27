@@ -16,6 +16,12 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 <div class:list={['ascii', { full, strip }]} data-ascii>
 	{full && heading && <p class="ascii-head">{heading}</p>}
 	{full && backHref && <a class="ascii-exit" href={backHref}>[ &lt;- {backLabel ?? 'back'} ]</a>}
+	{!strip && (
+		<p class="ascii-count" aria-live="polite">
+			<span>roaches squashed</span>
+			<b data-ascii-count>000</b>
+		</p>
+	)}
 	{!strip && <label class="ascii-panel">
 		<span class="ascii-k">/ characters</span>
 		<span class="ascii-row">
@@ -62,6 +68,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 	}
 	.ascii-head,
 	.ascii-exit,
+	.ascii-count,
 	.ascii-panel {
 		position: absolute;
 		z-index: 2;
@@ -91,9 +98,63 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		background: #050506;
 		text-decoration: none;
 	}
+	/* squash counter, top right under the nav */
+	.ascii-count {
+		top: 1rem;
+		right: 1rem;
+		display: grid;
+		justify-items: end;
+		gap: 0.15rem;
+		padding: 0.55rem 0.8rem;
+		background: rgba(14, 14, 16, 0.88);
+		border: 1px solid #2a2a2e;
+		font-size: 0.6rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: #8a8a90;
+		pointer-events: none;
+	}
+	.ascii-count b {
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: 1.8rem;
+		line-height: 1;
+		letter-spacing: 0.02em;
+		color: #ff2e4d;
+		text-shadow: -2px 0 #13e8ff;
+	}
+	.ascii-count.bump b {
+		animation: bump 0.25s ease-out;
+	}
+	@keyframes bump {
+		0% { transform: scale(1.35); color: #e6e6e9; }
+		100% { transform: scale(1); }
+	}
+	.full .ascii-count {
+		top: clamp(3.4rem, 9vh, 5rem);
+		right: clamp(1rem, 3vw, 1.6rem);
+	}
+	.full :global(canvas) {
+		touch-action: none;
+	}
 	@media (max-width: 640px) {
 		.ascii-head {
 			top: 8.2rem;
+		}
+		/* phones: a slim tally centred under the title, clear of the back button */
+		.full .ascii-count {
+			top: calc(8.2rem + clamp(1.9rem, 6vw, 2.4rem));
+			right: auto;
+			left: 50%;
+			transform: translateX(-50%);
+			display: flex;
+			align-items: baseline;
+			gap: 0.6rem;
+			padding: 0.35rem 0.7rem;
+			white-space: nowrap;
+		}
+		.full .ascii-count b {
+			font-size: 1.2rem;
 		}
 	}
 	/* the control: a small panel like ascii-magic's style node */
@@ -166,7 +227,15 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		}
 		const range = host.querySelector<HTMLInputElement>('[data-ascii-size]')!;
 		const out = host.querySelector<HTMLOutputElement>('[data-ascii-out]')!;
-		mountAsciiRoaches(host, { size: Number(range.value) }).then((art) => {
+		const count = host.querySelector<HTMLElement>('[data-ascii-count]')!;
+		const onSquash = (n: number) => {
+			count.textContent = String(n).padStart(3, '0');
+			const box = count.parentElement!;
+			box.classList.remove('bump');
+			void box.offsetWidth;
+			box.classList.add('bump');
+		};
+		mountAsciiRoaches(host, { size: Number(range.value), onSquash }).then((art) => {
 			const set = (v: number) => {
 				range.value = String(Math.max(Number(range.min), Math.min(Number(range.max), Math.round(v))));
 				out.value = range.value;
@@ -187,6 +256,22 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 					{ passive: false },
 				);
 				range.addEventListener('input', () => (acc = Number(range.value)));
+				// phones: dragging up and down the screen moves the size slider
+				let lastY: number | null = null;
+				host.addEventListener('touchstart', (e) => {
+					if ((e.target as HTMLElement).closest('.ascii-panel, a')) return;
+					lastY = e.touches[0].clientY;
+				}, { passive: true });
+				host.addEventListener('touchmove', (e) => {
+					if (lastY == null) return;
+					e.preventDefault();
+					const y = e.touches[0].clientY;
+					// drag up = zoom in (bigger), down = zoom out
+					acc = Math.max(6, Math.min(64, acc + (lastY - y) * 0.08));
+					lastY = y;
+					if (Math.round(acc) !== Number(range.value)) set(acc);
+				}, { passive: false });
+				host.addEventListener('touchend', () => (lastY = null));
 			}
 		});
 	}

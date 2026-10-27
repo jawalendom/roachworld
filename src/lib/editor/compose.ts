@@ -918,7 +918,7 @@ export function roachStrip(s: Sheet, t: Theme, href: string) {
 	const ch = px * 1.02;
 	const h = Math.round(Math.min(230, Math.max(150, s.vh * 0.26)));
 	const cols = Math.floor(w / cw), rows = Math.floor(h / ch);
-	const field = createRoachField({ count: 3, horizontal: true });
+	const field = createRoachField({ count: 3, horizontal: true, dots: false });
 	field.setGrid(cols, rows, cols, (rows * ch) / cw); // world in square units of one cell's width
 	const y = s.cursor + 10;
 	let last = -1;
@@ -934,6 +934,13 @@ export function roachStrip(s: Sheet, t: Theme, href: string) {
 			if (!info.reduce) field.step(info.t, dt);
 			const cells = field.cells(info.t);
 			ctx.save();
+			// the same fixed grey grid as the full piece, framing the band
+			ctx.globalAlpha = p;
+			ctx.fillStyle = '#1e1e22';
+			for (let gx = 0; gx <= w; gx += 32) ctx.fillRect(x + gx, 0, 1, h);
+			for (let gy = 0; gy <= h; gy += 32) ctx.fillRect(x, gy, w, 1);
+			ctx.fillRect(x, h - 1, w, 1);
+			ctx.fillRect(x + w - 1, 0, 1, h);
 			ctx.font = font;
 			ctx.textBaseline = 'middle';
 			// one fillText per ink per row

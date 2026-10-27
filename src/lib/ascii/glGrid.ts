@@ -8,7 +8,11 @@ attribute vec2 p;
 void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
 
 const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 uniform sampler2D cells;
 uniform sampler2D atlas;
 uniform vec2 grid;      // cols, rows
@@ -16,22 +20,34 @@ uniform vec2 cellPx;    // one cell, device px
 uniform vec2 atlasGrid; // glyphs, inks
 uniform float height;   // canvas height, device px
 uniform vec3 bg;
+uniform float lineGap;  // background grid spacing, device px (0 = none)
+uniform float lineW;    // its line width, device px
+uniform vec3 lineCol;
 void main() {
 	vec2 p = vec2(gl_FragCoord.x, height - gl_FragCoord.y);
 	vec2 cell = floor(p / cellPx);
 	vec4 c = texture2D(cells, (cell + 0.5) / grid);
 	vec3 col = bg;
+	// a fixed grey grid behind the characters: screen-space, so zooming the
+	// characters never resizes it
+	if (lineGap > 0.0) {
+		vec2 m = mod(p, lineGap);
+		if (min(m.x, m.y) < lineW) col = lineCol;
+	}
+	vec3 under = col;
 	if (c.b > 0.0) {
 		vec2 f = (p - cell * cellPx) / cellPx;
 		vec2 at = (vec2(floor(c.r * 255.0 + 0.5), floor(c.g * 255.0 + 0.5)) + f) / atlasGrid;
 		vec4 a = texture2D(atlas, at);
-		col = mix(bg, a.rgb, a.a * c.b);
+		col = mix(under, a.rgb, a.a * c.b);
 	}
 	gl_FragColor = vec4(col, 1.0);
 }`;
 
 export interface GlGrid {
 	setAtlas(atlas: HTMLCanvasElement, glyphs: number, inks: number): void;
+	/** background grid: spacing and line width in device px, 0–1 rgb */
+	setLines(gap: number, width: number, rgb: [number, number, number]): void;
 	draw(cells: Uint8Array, cols: number, rows: number, cellW: number, cellH: number): void;
 }
 
@@ -73,6 +89,7 @@ export function makeGlGrid(canvas: HTMLCanvasElement, bg: [number, number, numbe
 	gl.uniform1i(u('cells'), 0);
 	gl.uniform1i(u('atlas'), 1);
 	gl.uniform3f(u('bg'), ...bg);
+	gl.uniform1f(u('lineGap'), 0);
 	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
 	return {
@@ -81,6 +98,11 @@ export function makeGlGrid(canvas: HTMLCanvasElement, bg: [number, number, numbe
 			gl.bindTexture(gl.TEXTURE_2D, atlasTex);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
 			gl.uniform2f(u('atlasGrid'), glyphs, inks);
+		},
+		setLines(gap, width, rgb) {
+			gl.uniform1f(u('lineGap'), gap);
+			gl.uniform1f(u('lineW'), width);
+			gl.uniform3f(u('lineCol'), ...rgb);
 		},
 		draw(cells, cols, rows, cellW, cellH) {
 			gl.viewport(0, 0, canvas.width, canvas.height);

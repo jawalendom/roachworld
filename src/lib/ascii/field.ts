@@ -68,6 +68,8 @@ export interface FieldOpts {
 	count?: number;
 	/** mostly left ↔ right, with the odd diagonal or vertical one */
 	horizontal?: boolean;
+	/** faint dots in the empty cells (default on) */
+	dots?: boolean;
 	/** body length range in reference cells, unscaled (horizontal: sized to the band) */
 	len?: [number, number];
 }
@@ -416,7 +418,7 @@ export function createRoachField(o: FieldOpts = {}): RoachField {
 					if (v < 0.08) {
 						cells[c] = RAMP.length - 1;
 						cells[c + 1] = 0;
-						cells[c + 2] = (x + y * 3) % 7 === 0 ? 46 : 0;
+						cells[c + 2] = o.dots !== false && (x + y * 3) % 7 === 0 ? 46 : 0;
 						continue;
 					}
 					cells[c] = Math.min(RAMP.length - 2, Math.floor((1 - v) * (RAMP.length - 1)));
