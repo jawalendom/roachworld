@@ -49,6 +49,7 @@ const aspect = box[2] / box[3];
 			<div class="holo-ink holo-ink--c"></div>
 			<div class="holo-ink"></div>
 			<div class="holo-glare"></div>
+			<div class="holo-smooth"></div>
 			<div class="holo-crease" data-holo-crease></div>
 		</div>
 		<div class="holo-flap" data-holo-flap>
@@ -175,10 +176,9 @@ const aspect = box[2] / box[3];
 		--tx: 0deg;
 		--ty: 0deg;
 		--lift: 0;
-		position: absolute; /* on the issue's cover, scrolling with it */
-		z-index: 6; /* over the scanlines, under the bezel */
+		position: absolute; /* on the page, scrolling with it */
+		z-index: 4; /* stuck down: under the scanlines, like it's part of the surface */
 		top: 50vh;
-		/* clear of the index dial on the right edge */
 		right: calc(clamp(9rem, 15vw, 13rem) + clamp(3rem, 6vw, 5rem)); /* clear of the contents column */
 		height: var(--h);
 		aspect-ratio: var(--aspect);
@@ -192,17 +192,44 @@ const aspect = box[2] / box[3];
 	}
 	.holo.is-lifted {
 		cursor: grabbing;
+		z-index: 6; /* in hand: up off the surface, over the scanlines */
 	}
 	.holo-lift {
 		position: absolute;
 		inset: 0;
 		transform-style: preserve-3d;
 		transform: rotateX(var(--ty)) rotateY(var(--tx)) translateZ(calc(var(--lift) * 40px)) scale(calc(1 + var(--lift) * 0.07));
-		transition: transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+		transition: transform 0.18s cubic-bezier(0.4, 0, 0.9, 0.6); /* laid down: quick, no bounce */
 	}
-	.holo.is-lifted .holo-lift,
-	.holo.is-hover .holo-lift {
+	.holo.is-lifted .holo-lift {
 		transition: transform 0.12s ease-out;
+	}
+	/* the press as it goes down: squashed flat for a beat, then still */
+	.holo.is-pressed .holo-card {
+		animation: holo-press 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+	}
+	@keyframes holo-press {
+		0% { scale: 1.015; filter: brightness(1.25); }
+		35% { scale: 0.985; filter: brightness(1.1); }
+		100% { scale: 1; filter: none; }
+	}
+	/* a burnished sheen wipes across as it's smoothed down */
+	.holo-smooth {
+		position: absolute;
+		inset: 0;
+		-webkit-mask: var(--cut) center / 100% 100% no-repeat;
+		mask: var(--cut) center / 100% 100% no-repeat;
+		background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.7) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat;
+		mix-blend-mode: overlay;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.holo.is-pressed .holo-smooth {
+		animation: holo-smooth 0.5s 0.06s ease-out;
+	}
+	@keyframes holo-smooth {
+		0% { opacity: 1; background-position: -150% 0; }
+		100% { opacity: 1; background-position: 250% 0; }
 	}
 	/* every layer is cut to the sticker's shape */
 	.holo-card,
@@ -258,9 +285,10 @@ const aspect = box[2] / box[3];
 	/* contact shadow when stuck down; a soft drop when lifted */
 	.holo-shadow {
 		background: #000;
-		opacity: calc(0.55 - var(--lift) * 0.25);
-		filter: blur(calc(2px + var(--lift) * 10px));
-		translate: calc(3px + var(--lift) * 12px) calc(5px + var(--lift) * 22px);
+		/* stuck: a hairline contact shadow right under the edge; held: a soft drop */
+		opacity: calc(0.6 - var(--lift) * 0.3);
+		filter: blur(calc(0.6px + var(--lift) * 11px));
+		translate: calc(0.5px + var(--lift) * 12px) calc(1px + var(--lift) * 22px);
 		transform: translateZ(-1px);
 	}
 	/* chrome holo foil: glitch green running into cyan and a flash of lilac,
@@ -514,7 +542,8 @@ const aspect = box[2] / box[3];
 			if (e.pointerType === 'mouse') el.classList.add('is-hover');
 		});
 		el.addEventListener('pointermove', (e) => {
-			if (!drag && e.pointerType === 'mouse') aim(e);
+			// stuck down it doesn't tilt — only the light moves across the foil
+			if (!drag && e.pointerType === 'mouse') aim(e, 0);
 		});
 		el.addEventListener('pointerleave', () => {
 			if (drag) return;
@@ -707,6 +736,11 @@ const aspect = box[2] / box[3];
 			twist = null;
 			cancelAnimationFrame(edgeRaf);
 			el.classList.remove('is-lifted', 'is-hover');
+			// pressed down and smoothed flat
+			el.classList.remove('is-pressed');
+			void el.offsetWidth;
+			el.classList.add('is-pressed');
+			window.setTimeout(() => el.classList.remove('is-pressed'), 650);
 			set('--lift', 0);
 			rest();
 			target = 0;
