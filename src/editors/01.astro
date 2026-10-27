@@ -24,6 +24,8 @@ const articles = await Promise.all(
 			kicker: a.data.kicker,
 			title: a.data.title,
 			dek: a.data.dek,
+			asciiRoaches: a.data.asciiRoaches,
+			hasShelf: !!a.data.cds,
 			byline: a.data.byline,
 			heroUrl: hero?.src ?? null,
 			blocks: parseBody(a.body ?? ''),
@@ -203,7 +205,10 @@ const payload = {
 						if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
 						const cut = a.blocks.findIndex((b: { type: string }) => b.type === 'more');
 						C.body(s, T, cut >= 0 ? a.blocks.slice(0, cut) : a.blocks);
-						if (cut >= 0) C.readMore(s, T, a.href);
+						if (a.asciiRoaches) C.roachStrip(s, T, a.href);
+						if (a.hasShelf) C.spinningDisc(s, T, a.title, a.href);
+						// the roach piece is something to look at, not read
+						if (cut >= 0) C.readMore(s, T, a.href, a.asciiRoaches ? { label: '[ SEE MORE  -> ]' } : {});
 						if (a.chat)
 							C.chat(s, T, a.chat, {
 								me: a.byline.split(' ')[0],

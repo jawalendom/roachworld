@@ -5,6 +5,7 @@ import Issue from '../../../components/Issue.astro';
 import Edition from '../../../layouts/Edition.astro';
 import ArticleSheet from '../../../components/ArticleSheet.astro';
 import CdShelf from '../../../components/CdShelf.astro';
+import AsciiRoaches from '../../../components/AsciiRoaches.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../lib/issues';
 import { parseBody } from '../../../lib/editor/parseBody';
 
@@ -54,6 +55,7 @@ const shareQuote =
 	>
 		<Content />
 		{article.data.cds && <CdShelf cds={article.data.cds} />}
+		{article.data.asciiRoaches && <AsciiRoaches />}
 	</Issue>
 </Layout>
 )}

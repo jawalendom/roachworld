@@ -5,6 +5,9 @@ import type { Sheet } from './sheet';
 import type { Block } from './parseBody';
 import { layoutInk, drawInk, fitInk } from './ink';
 import { rule, dataBar, brackets, crosshair, sliceGlitch, hash } from './glitch';
+import { prepareWithSegments, measureNaturalWidth } from '@chenglou/pretext';
+import { createRoachField, RAMP, INKS } from '../ascii/field';
+import { makeSpinDisc } from '../shelf/spinDisc';
 
 export interface Theme {
 	ground: string;
@@ -902,3 +905,83 @@ export function readMore(s: Sheet, t: Theme, href: string, o: { label?: string; 
 		ctx.globalAlpha = 1;
 	}
 }
+
+/** A band of ASCII roaches crossing the column — a taste of the full piece.
+ *  Runs the same simulation as the article (field.ts), mostly left ↔ right with
+ *  the odd diagonal one; tapping it opens the article. */
+export function roachStrip(s: Sheet, t: Theme, href: string) {
+	const { x, w } = contentBox(s);
+	const px = s.W < 620 ? 9 : 11;
+	const font = t.mono(px);
+	// pretext: one mono cell's advance, off-DOM
+	const cw = measureNaturalWidth(prepareWithSegments('@', font)) || px * 0.6;
+	const ch = px * 1.02;
+	const h = Math.round(Math.min(230, Math.max(150, s.vh * 0.26)));
+	const cols = Math.floor(w / cw), rows = Math.floor(h / ch);
+	const field = createRoachField({ count: 3, horizontal: true });
+	field.setGrid(cols, rows, cols, (rows * ch) / cw); // world in square units of one cell's width
+	const y = s.cursor + 10;
+	let last = -1;
+	const SPACE = 32;
+	const line = new Uint16Array(cols);
+	s.push({
+		y,
+		h,
+		reveal: s.vh * 0.3,
+		draw(ctx, p, info) {
+			const dt = last < 0 ? 0 : Math.min(0.1, info.t - last);
+			last = info.t;
+			if (!info.reduce) field.step(info.t, dt);
+			const cells = field.cells(info.t);
+			ctx.save();
+			ctx.font = font;
+			ctx.textBaseline = 'middle';
+			// one fillText per ink per row
+			for (let r = 0; r < rows; r++) {
+				for (let ink = -1; ink < INKS.length; ink++) {
+					line.fill(SPACE);
+					let any = false;
+					for (let c0 = 0; c0 < cols; c0++) {
+						const n = (r * cols + c0) * 3;
+						const a = cells[n + 2];
+						if (!a) continue;
+						const dot = a < 255;
+						if (ink < 0 ? !dot : dot || cells[n + 1] !== ink) continue;
+						line[c0] = RAMP.charCodeAt(cells[n]);
+						any = true;
+					}
+					if (!any) continue;
+					ctx.globalAlpha = p * (ink < 0 ? 0.18 : 1);
+					ctx.fillStyle = ink < 0 ? INKS[0] : INKS[ink];
+					ctx.fillText(String.fromCharCode(...line), x, (r + 0.5) * ch);
+				}
+			}
+			ctx.restore();
+		},
+	});
+	s.hotspot({ x, y, w, h }, 'roach-strip', href);
+	s.cursor = y + h + 6;
+}
+
+/** A single CD spinning, its label reading `title` — the shelf's teaser.
+ *  Tapping it opens the piece. */
+export function spinningDisc(s: Sheet, t: Theme, title: string, href: string) {
+	const { x, w } = contentBox(s);
+	const r = Math.round(Math.min(130, Math.max(80, s.vh * 0.15), w * 0.32));
+	const h = r * 2 + 40;
+	const disc = makeSpinDisc(title, t.accent);
+	const y = s.cursor + 10;
+	s.push({
+		y,
+		h,
+		reveal: s.vh * 0.3,
+		draw(ctx, p, info) {
+			// drops in and spins up as it's revealed
+			const e = 1 - (1 - p) ** 3;
+			disc.draw(ctx, x + w / 2, h / 2 + (1 - e) * 24, r * (0.85 + 0.15 * e), info.reduce ? 0 : info.t, e);
+		},
+	});
+	s.hotspot({ x: x + w / 2 - r, y, w: r * 2, h }, 'shelf-disc', href);
+	s.cursor = y + h;
+}
+

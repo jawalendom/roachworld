@@ -1,0 +1,53 @@
+---
+// The shelf's teaser on the plain issue page: one CD spinning, labelled with
+// the piece's title, linking through to it.
+interface Props {
+	title: string;
+	href: string;
+}
+const { title, href } = Astro.props;
+---
+
+<a class="shelf-disc" href={href} data-shelf-disc={title} aria-label={`Open ${title}`}>
+	<canvas aria-hidden="true"></canvas>
+</a>
+
+<style>
+	.shelf-disc {
+		display: block;
+		background: none !important;
+		border: 0 !important;
+		box-shadow: none !important;
+		text-decoration: none;
+		width: min(260px, 70%);
+		aspect-ratio: 1;
+		margin: 1.4rem auto;
+	}
+	.shelf-disc canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+</style>
+
+<script>
+	import { makeSpinDisc } from '../lib/shelf/spinDisc';
+	import { fontsReady } from '../lib/pretext/fonts';
+	await fontsReady();
+	const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	for (const el of document.querySelectorAll<HTMLElement>('[data-shelf-disc]')) {
+		const canvas = el.querySelector('canvas')!;
+		const ctx = canvas.getContext('2d')!;
+		const disc = makeSpinDisc(el.dataset.shelfDisc!);
+		const t0 = performance.now();
+		const frame = (now: number) => {
+			const dpr = Math.min(devicePixelRatio || 1, 2);
+			const sz = Math.round(canvas.clientWidth * dpr);
+			if (canvas.width !== sz) canvas.width = canvas.height = sz;
+			ctx.clearRect(0, 0, sz, sz);
+			disc.draw(ctx, sz / 2, sz / 2, sz * 0.42, reduce ? 0 : (now - t0) / 1000);
+			if (!reduce) requestAnimationFrame(frame);
+		};
+		requestAnimationFrame(frame);
+	}
+</script>

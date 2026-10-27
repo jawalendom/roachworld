@@ -18,10 +18,15 @@ export interface SheetElement {
 	latch?: boolean;
 	draw(ctx: CanvasRenderingContext2D, p: number, info: FrameInfo): void;
 	_p?: number;
+	_forcedAt?: number;
+	_forcedFrom?: number;
 }
 
 /** Per-frame context. `t` is seconds since the sheet mounted (frozen when the
  *  viewer prefers reduced motion); `energy` is 0..1 from recent scroll speed. */
+/** how long a forced reveal (scrolled past / end of sheet) takes to play out */
+const FORCE_SECS = 0.7;
+
 export interface FrameInfo {
 	W: number;
 	vh: number;
@@ -219,8 +224,14 @@ export function mountSheet(
 			// "written" — guarantees nothing stays half-inked after you scroll past.
 			// elements in the last stretch of the sheet complete much sooner so
 			// there's no dead run-out of blank scroll after the final content.
+			// Forced elements still play their glitch-in, just quickly on a clock,
+			// rather than snapping to finished.
 			const nearEnd = el.y > contentH - vh * 1.3;
-			if (sy >= el.y - vh * (nearEnd ? 0.75 : 0.15)) p = 1;
+			if (sy >= el.y - vh * (nearEnd ? 0.75 : 0.15)) {
+				el._forcedAt ??= info.t;
+				const from = el._forcedFrom ??= el._p ?? 0;
+				p = Math.max(p, from + (1 - from) * Math.min(1, (info.t - el._forcedAt) / FORCE_SECS));
+			} else el._forcedAt = el._forcedFrom = undefined;
 			if (reduce) p = sy + vh > el.y - top ? 1 : 0;
 			if (el.latch !== false) el._p = Math.max(el._p ?? 0, p);
 			else el._p = p;

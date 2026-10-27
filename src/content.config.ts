@@ -46,6 +46,8 @@ const articles = defineCollection({
 			// An interactive shelf of CDs (jewel cases you can pull out, turn and
 			// open). `color` is the print colour; `cover` replaces the drawn booklet.
 			shelfSubtitle: z.string().optional(),
+			// Roaches crawling across the screen in ASCII, with a size slider.
+			asciiRoaches: z.boolean().default(false),
 			cds: z
 				.array(
 					z.object({

@@ -52,7 +52,7 @@ export function roachSvg(o: { fill?: string; square?: boolean; style?: string; v
 	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(' ')}" fill="${fill}">${style}${paths}</svg>`;
 }
 
-let cache: Record<RoachPart, Path2D> | null = null;
+const cache: Partial<Record<RoachVariant, Record<RoachPart, Path2D>>> = {};
 
 /** Draw the roach on a canvas, `height` px tall with its top-left at (x, y).
  *  `transform` (optional) runs per part with the context already at that part's
@@ -64,12 +64,14 @@ export function drawRoach(
 	height: number,
 	color: string,
 	transform?: (part: RoachPart, ctx: CanvasRenderingContext2D) => void,
+	variant: RoachVariant = 'scratchy',
 ) {
-	cache ??= {
-		antennae: new Path2D(ROACH_PATHS.antennae),
-		head: new Path2D(ROACH_PATHS.head),
-		body: new Path2D(ROACH_PATHS.body),
-	};
+	const P = roachPaths(variant);
+	const paths = (cache[variant] ??= {
+		antennae: new Path2D(P.antennae),
+		head: new Path2D(P.head),
+		body: new Path2D(P.body),
+	});
 	const [vx, vy, , vh] = ROACH_VIEWBOX;
 	const k = height / vh;
 	ctx.save();
@@ -85,7 +87,7 @@ export function drawRoach(
 			transform(part, ctx);
 			ctx.translate(-ax, -ay);
 		}
-		ctx.fill(cache[part], 'evenodd');
+		ctx.fill(paths[part], 'evenodd');
 		ctx.restore();
 	}
 	ctx.restore();

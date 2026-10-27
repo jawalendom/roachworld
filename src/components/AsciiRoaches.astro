@@ -1,0 +1,193 @@
+---
+// Roaches crawling across the screen in ASCII, with a font-size slider that
+// zooms the characters in and out. Tap a roach to squash it. `strip` is the
+// short band on the issue page: a few roaches crossing, no controls. `full` fills the viewport (editor view);
+// otherwise it sits inline in an article as a framed panel.
+interface Props {
+	full?: boolean;
+	strip?: boolean;
+	heading?: string;
+	backHref?: string;
+	backLabel?: string;
+}
+const { full = false, strip = false, heading, backHref, backLabel } = Astro.props;
+---
+
+<div class:list={['ascii', { full, strip }]} data-ascii>
+	{full && heading && <p class="ascii-head">{heading}</p>}
+	{full && backHref && <a class="ascii-exit" href={backHref}>[ &lt;- {backLabel ?? 'back'} ]</a>}
+	{!strip && <label class="ascii-panel">
+		<span class="ascii-k">/ characters</span>
+		<span class="ascii-row">
+			<span>font size</span>
+			<input type="range" min="6" max="64" step="1" value="40" data-ascii-size aria-label="Character size" />
+			<output data-ascii-out>40</output>
+		</span>
+	</label>}
+	<noscript><p class="ascii-k">The roaches need JavaScript.</p></noscript>
+</div>
+
+<style>
+	.ascii {
+		position: relative;
+		margin: 2rem 0;
+		aspect-ratio: 16 / 10;
+		min-height: 360px;
+		overflow: hidden;
+		background: #050506;
+		color: #e6e6e9;
+		font-family: var(--font-mono);
+		outline: 1px solid rgba(0, 255, 156, 0.35);
+	}
+	.ascii.strip {
+		aspect-ratio: auto;
+		height: clamp(150px, 24vw, 220px);
+		min-height: 0;
+		margin: 1.4rem 0;
+	}
+	.ascii.full {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		margin: 0;
+		aspect-ratio: auto;
+		outline: 0;
+	}
+	.ascii :global(canvas) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		display: block;
+	}
+	.ascii-head,
+	.ascii-exit,
+	.ascii-panel {
+		position: absolute;
+		z-index: 2;
+		margin: 0;
+	}
+	.ascii-head {
+		top: clamp(3.4rem, 9vh, 5rem);
+		left: 50%;
+		transform: translateX(-50%);
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: clamp(1.4rem, 4vw, 2.6rem);
+		white-space: nowrap;
+		text-transform: uppercase;
+		text-shadow: 0.05em 0 #ff2e4d, -0.05em 0 #13e8ff;
+		pointer-events: none;
+	}
+	.ascii-exit {
+		top: clamp(3.4rem, 9vh, 5rem);
+		left: clamp(1rem, 3vw, 1.6rem);
+		padding: 0.6rem 0.9rem;
+		font-size: 0.7rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: #00ff9c;
+		outline: 1px solid #00ff9c;
+		background: #050506;
+		text-decoration: none;
+	}
+	@media (max-width: 640px) {
+		.ascii-head {
+			top: 8.2rem;
+		}
+	}
+	/* the control: a small panel like ascii-magic's style node */
+	.ascii-panel {
+		right: 1rem;
+		bottom: 1rem;
+		display: grid;
+		gap: 0.55rem;
+		padding: 0.8rem 1rem;
+		background: rgba(14, 14, 16, 0.92);
+		border: 1px solid #2a2a2e;
+		font-size: 0.68rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+	}
+	.full .ascii-panel {
+		left: 50%;
+		right: auto;
+		bottom: clamp(4.6rem, 11vh, 6rem);
+		transform: translateX(-50%);
+	}
+	.ascii-k {
+		color: #8a8a90;
+	}
+	.ascii-row {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		color: #e6e6e9;
+		white-space: nowrap;
+	}
+	.ascii-row output {
+		min-width: 2ch;
+		text-align: right;
+		color: #00ff9c;
+	}
+	input[type='range'] {
+		appearance: none;
+		width: clamp(8rem, 22vw, 13rem);
+		height: 2px;
+		background: #3a3a40;
+		cursor: pointer;
+	}
+	input[type='range']::-webkit-slider-thumb {
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		background: #e6e6e9;
+		border: 0;
+	}
+	input[type='range']::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		background: #e6e6e9;
+		border: 0;
+		border-radius: 0;
+	}
+	input[type='range']:focus-visible {
+		outline: 1px solid #00ff9c;
+		outline-offset: 6px;
+	}
+</style>
+
+<script>
+	import { mountAsciiRoaches } from '../lib/ascii/roaches';
+	for (const host of document.querySelectorAll<HTMLElement>('[data-ascii]')) {
+		if (host.classList.contains('strip')) {
+			mountAsciiRoaches(host, { size: 11, strip: true });
+			continue;
+		}
+		const range = host.querySelector<HTMLInputElement>('[data-ascii-size]')!;
+		const out = host.querySelector<HTMLOutputElement>('[data-ascii-out]')!;
+		mountAsciiRoaches(host, { size: Number(range.value) }).then((art) => {
+			const set = (v: number) => {
+				range.value = String(Math.max(Number(range.min), Math.min(Number(range.max), Math.round(v))));
+				out.value = range.value;
+				art.setSize(Number(range.value));
+			};
+			range.addEventListener('input', () => set(Number(range.value)));
+			// full screen: scrolling zooms the characters too (the page itself doesn't scroll)
+			if (host.classList.contains('full')) {
+				let acc = Number(range.value);
+				host.addEventListener(
+					'wheel',
+					(e) => {
+						if ((e.target as HTMLElement).closest('.ascii-panel')) return;
+						e.preventDefault();
+						acc = Math.max(6, Math.min(64, acc - e.deltaY * 0.04));
+						if (Math.round(acc) !== Number(range.value)) set(acc);
+					},
+					{ passive: false },
+				);
+				range.addEventListener('input', () => (acc = Number(range.value)));
+			}
+		});
+	}
+</script>

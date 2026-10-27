@@ -4,6 +4,7 @@
 import Edition from '../../../../layouts/Edition.astro';
 import ArticleSheet from '../../../../components/ArticleSheet.astro';
 import CdShelf from '../../../../components/CdShelf.astro';
+import AsciiRoaches from '../../../../components/AsciiRoaches.astro';
 import EditionToggle from '../../../../components/EditionToggle.astro';
 import { getIssues, articleSlug, articleOrder } from '../../../../lib/issues';
 
@@ -23,7 +24,14 @@ const articleHref = `${base}/issues/${issue.dir}/${articleSlug(article)}/`;
 ---
 
 <Edition title={article.data.title} description={article.data.dek} image={article.data.heroImage}>
-	{article.data.cds ? (
+	{article.data.asciiRoaches ? (
+		<AsciiRoaches
+			full
+			heading={article.data.filler || article.data.title.startsWith('[') ? undefined : article.data.title}
+			backHref={`${base}/issues/${issue.dir}/`}
+			backLabel={`Back to Vol ${issue.data.number}`}
+		/>
+	) : article.data.cds ? (
 		<CdShelf
 			cds={article.data.cds}
 			full

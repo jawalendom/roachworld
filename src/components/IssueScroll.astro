@@ -4,6 +4,8 @@ import IssueMasthead from './IssueMasthead.astro';
 import ArticleBlock from './ArticleBlock.astro';
 import IssueIndex from './IssueIndex.astro';
 import Chat from './Chat.astro';
+import AsciiRoaches from './AsciiRoaches.astro';
+import ShelfDisc from './ShelfDisc.astro';
 import { parseBody } from '../lib/editor/parseBody';
 import { articleSlug, articleOrder, type Issue } from '../lib/issues';
 
@@ -71,8 +73,10 @@ const indexItems = articles.map((a) => ({ order: a.order, title: a.data.title, a
 								<p>{b.text}</p>
 							) : null,
 						)}
+						{a.data.asciiRoaches && <AsciiRoaches strip />}
+						{a.data.cds && <ShelfDisc title={a.data.title} href={`${base}/issues/${issue.dir}/${a.slug}/`} />}
 						<p class="read-more">
-							<a href={`${base}/issues/${issue.dir}/${a.slug}/`}>[ Read more -&gt; ]</a>
+							<a href={`${base}/issues/${issue.dir}/${a.slug}/`}>[ {a.data.asciiRoaches ? 'See' : 'Read'} more -&gt; ]</a>
 						</p>
 					</>
 				) : (
