@@ -217,6 +217,8 @@ export function contents(
 	});
 	s.cursor += 40;
 
+	// the bar under "// CONTENTS": the holo sticker can't be moved below it
+	s.anchor('contents-line');
 	s.push({
 		y: s.cursor,
 		h: 10,

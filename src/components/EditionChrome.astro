@@ -2,6 +2,12 @@
 // Bespoke navigation for the editor's view: Latest / Archive / About and a
 // full-screen issue Index, all drawn in the hand-made key of the immersive view
 // rather than the plain-view chrome. Palette + hand marks match src/editors/*.
+//
+// On an issue page the contents run down the right-hand side, after the
+// table-of-contents in jhey.dev/prototypes/2025/toc-scroll-markers: every
+// article listed, the one you're reading lit up with a small square marker that
+// slides to it, and "back to top" once you're past the cover. "Contents" opens
+// the full-screen index.
 import type { Issue } from '../lib/issues';
 import { articleSlug, articleOrder } from '../lib/issues';
 
@@ -54,12 +60,26 @@ const SCRAWLS = [
 	{
 		issue && items.length > 0 && (
 			<>
-				<button type="button" class="edx-open" data-index-open aria-haspopup="dialog">
-					<span class="edx-no" data-index-count>
-						{String(items.length).padStart(2, '0')}
-					</span>
-					<span class="edx-word">Index</span>
-				</button>
+				<nav class="toc" data-toc aria-label="Articles in this issue">
+					<button type="button" class="toc-h" data-index-open aria-haspopup="dialog">
+						Contents <span class="edx-no" data-index-count>{String(items.length).padStart(2, '0')}</span>
+					</button>
+					<ol class="toc-list">
+						{items.map((it) => (
+							<li>
+								<a href={`#${it.slug}`} data-toc-jump={it.slug}>
+									<span class="toc-no">{String(it.order).padStart(2, '0')}</span>
+									<span class="toc-t">{it.title}</span>
+								</a>
+							</li>
+						))}
+					</ol>
+					<span class="toc-marker" data-toc-marker aria-hidden="true"></span>
+					<a href="#top" class="toc-top" data-toc-top>
+						↑ Back to top
+					</a>
+				</nav>
+
 
 				<div class="edx-panel" data-index-panel hidden role="dialog" aria-label="Issue contents">
 					<div class="edx-inner">
@@ -154,31 +174,147 @@ const SCRAWLS = [
 		color: var(--ed-yellow);
 	}
 
-	/* ── index button ─────────────────────────────────────────── */
-	.edx-open {
+	/* ── contents down the right-hand side ───────────────────── */
+	.toc {
 		position: fixed;
-		right: clamp(0.8rem, 3vw, 1.5rem);
-		bottom: clamp(0.8rem, 3vw, 1.5rem);
 		z-index: 60;
+		top: 50%;
+		right: clamp(1rem, 3vw, 2rem);
+		translate: 0 -50%;
+		width: clamp(9rem, 15vw, 13rem);
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		/* out of the way of the cover; slides in once you reach the articles */
+		opacity: 0;
+		translate: 0.6rem -50%;
+		pointer-events: none;
+		transition:
+			opacity 0.3s cubic-bezier(0.215, 0.61, 0.355, 1),
+			translate 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	.toc[data-shown] {
+		opacity: 1;
+		translate: 0 -50%;
+		pointer-events: auto;
+	}
+	.toc-h {
 		display: flex;
 		align-items: baseline;
 		gap: 0.5rem;
-		padding: 0.55em 0.9em;
-		background: var(--ed-ground);
-		border: 1px solid var(--ed-yellow);
-		color: var(--ed-ink);
+		margin: 0 0 0.6rem;
+		padding: 0;
+		border: none;
+		background: none;
 		cursor: pointer;
-		font-family: var(--font-mono);
-		font-size: 0.68rem;
-		letter-spacing: 0.13em;
-		text-transform: uppercase;
+		font: inherit;
+		font-size: 0.58rem;
+		letter-spacing: 0.18em;
+		color: var(--ed-ink);
 	}
-	.edx-open:hover {
-		border-color: var(--ed-blue);
+	.toc-h:hover {
+		color: var(--ed-yellow);
 	}
 	.edx-no {
+		color: var(--ed-dim);
+		font-size: 0.56rem;
+		white-space: nowrap;
+	}
+	.toc-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.toc-list a {
+		display: grid;
+		grid-template-columns: 1.6rem 1fr;
+		align-items: baseline;
+		padding-block: 0.3rem;
+		color: #6c6d75;
+		text-decoration: none;
+		background: none;
+		border: none;
+		transition: color 0.12s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	.toc-no {
+		font-size: 0.56rem;
+		opacity: 0.8;
+	}
+	.toc-t {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.toc-list a:is(:hover, :focus-visible) {
+		color: var(--ed-ink);
+	}
+	.toc-list a[aria-current='true'] {
 		color: var(--ed-yellow);
-		font-size: 0.62rem;
+		text-shadow: 0.08em 0 #ff2e4d, -0.08em 0 #13e8ff;
+	}
+	/* the square that slides to the article you're in */
+	.toc-marker {
+		position: absolute;
+		left: -0.9rem;
+		top: 0;
+		width: 6px;
+		height: 6px;
+		background: var(--ed-yellow);
+		opacity: 0;
+		transition:
+			top 0.26s cubic-bezier(0.215, 0.61, 0.355, 1),
+			opacity 0.26s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	.toc[data-active] .toc-marker {
+		opacity: 1;
+	}
+	.toc-top {
+		display: block;
+		margin-top: 1rem;
+		padding-top: 0.8rem;
+		border-top: 1px solid rgba(230, 230, 233, 0.12);
+		font-size: 0.56rem;
+		letter-spacing: 0.16em;
+		color: var(--ed-dim);
+		text-decoration: none;
+		background: none;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.26s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	.toc[data-active] .toc-top {
+		opacity: 1;
+		pointer-events: auto;
+	}
+	.toc-top:hover {
+		color: var(--ed-yellow);
+	}
+
+
+	@media (max-width: 640px) {
+		/* phones: just the numbers, a slim column on the right edge */
+		.toc {
+			width: auto;
+			right: 0.5rem;
+			padding: 0.4rem 0.45rem 0.4rem 0.9rem;
+			background: rgba(5, 5, 6, 0.86);
+			border: 1px solid rgba(0, 255, 156, 0.25);
+		}
+		.toc-h {
+			display: none;
+		}
+		.toc-list a {
+			grid-template-columns: auto;
+			padding-block: 0.35rem;
+		}
+		.toc-t,
+		.toc-top {
+			display: none;
+		}
+		.toc-marker {
+			left: 0.35rem;
+		}
 	}
 
 	/* ── contents panel ───────────────────────────────────────── */
@@ -316,6 +452,10 @@ const SCRAWLS = [
 		.edx-panel {
 			animation: none;
 		}
+		.toc-marker,
+		.toc-top {
+			transition-duration: 0s !important;
+		}
 		.edn .sq,
 		.edx-t .sq-lg {
 			transition: opacity 0.1s linear;
@@ -365,6 +505,34 @@ const SCRAWLS = [
 			});
 		}
 
+
+		// ── contents column ──
+		const toc = root.querySelector<HTMLElement>('[data-toc]');
+		const tocLinks = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-toc-jump]'));
+		const marker = root.querySelector<HTMLElement>('[data-toc-marker]');
+		const go = (id: string) => {
+			const fn = (sheet as any)?.__editionScrollTo as ((id: string, smooth?: boolean) => void) | undefined;
+			if (fn) fn(id);
+			else document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+			history.replaceState(null, '', `#${id}`);
+		};
+		tocLinks.forEach((a) =>
+			a.addEventListener('click', (e) => {
+				e.preventDefault();
+				go(a.dataset.tocJump!);
+			}),
+		);
+		root.querySelector('[data-toc-top]')?.addEventListener('click', (e) => {
+			e.preventDefault();
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+			history.replaceState(null, '', location.pathname);
+		});
+		const markTo = (a: HTMLAnchorElement | undefined) => {
+			if (!toc || !marker) return;
+			toc.toggleAttribute('data-active', !!a);
+			if (a) marker.style.top = `${a.offsetTop + a.offsetHeight / 2 - 3}px`;
+		};
+
 		// ── scroll-spy against the sheet's registered marks ──
 		if (!sheet) return;
 		const total = jumps.length;
@@ -376,8 +544,12 @@ const SCRAWLS = [
 			const sy = window.scrollY - sheet.offsetTop + window.innerHeight * 0.28;
 			let active = marks[0].id;
 			for (const m of marks) if (m.y <= sy) active = m.id;
-			if (active === currentId) return;
-			currentId = active;
+			// on the cover (before the first article) nothing is lit
+			const onCover = sy < marks[0].y;
+			toc?.toggleAttribute('data-shown', !onCover);
+			const key = onCover ? '' : active;
+			if (key === currentId) return;
+			currentId = key;
 
 			const i = jumps.findIndex((a) => a.dataset.jump === active);
 			if (count) {
@@ -389,6 +561,9 @@ const SCRAWLS = [
 			jumps.forEach((a) =>
 				a.setAttribute('aria-current', a.dataset.jump === active ? 'true' : 'false'),
 			);
+			const lit = onCover ? undefined : tocLinks.find((a) => a.dataset.tocJump === active);
+			tocLinks.forEach((a) => a.setAttribute('aria-current', a === lit ? 'true' : 'false'));
+			markTo(lit);
 		};
 
 		const start = () => {

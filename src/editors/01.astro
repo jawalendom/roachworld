@@ -7,6 +7,7 @@ import { getImage } from 'astro:assets';
 import type { Issue } from '../lib/issues';
 import { articleOrder, articleSlug } from '../lib/issues';
 import { parseBody } from '../lib/editor/parseBody';
+import HoloSticker from '../components/HoloSticker.astro';
 
 interface Props {
 	issue: Issue;
@@ -69,6 +70,7 @@ const payload = {
 	<canvas data-sheet></canvas>
 	<div data-sheet-spacer></div>
 	<div class="ed-scan" aria-hidden="true"></div>
+	<HoloSticker />
 	<script type="application/json" data-editor-data set:html={JSON.stringify(payload)} />
 </div>
 

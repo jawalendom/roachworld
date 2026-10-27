@@ -62,6 +62,8 @@ export interface Sheet {
 	gap(dy: number): void;
 	/** record a named scroll target at the current cursor (for the index). */
 	mark(id: string): void;
+	/** record a named y (sheet coords) for page furniture — not an index mark. */
+	anchor(id: string, y?: number): void;
 	/** register a clickable region (sheet-content coords) that jumps to mark `id`. */
 	hotspot(rect: { x: number; y: number; w: number; h: number }, id: string, href?: string): void;
 }
@@ -97,6 +99,7 @@ export function mountSheet(
 
 	let els: SheetElement[] = [];
 	let marks: SheetMark[] = [];
+	let anchors: Record<string, number> = {};
 	let hotspots: SheetHotspot[] = [];
 	let W = 0;
 	let vh = 0;
@@ -155,6 +158,7 @@ export function mountSheet(
 	function build() {
 		size();
 		marks = [];
+		anchors = {};
 		hotspots = [];
 		const sheet: Sheet = {
 			W,
@@ -173,6 +177,9 @@ export function mountSheet(
 			mark(id) {
 				marks.push({ id, y: this.cursor });
 			},
+			anchor(id, y) {
+				anchors[id] = y ?? this.cursor;
+			},
 			hotspot(rect, id, href) {
 				hotspots.push({ ...rect, id, href });
 			},
@@ -185,6 +192,7 @@ export function mountSheet(
 		built = true;
 		// expose scroll targets + a jump helper for the edition index chrome
 		(root as any).__editionMarks = marks;
+		(root as any).__editionAnchors = anchors;
 		(root as any).__editionScrollTo = scrollToMark;
 		root.dispatchEvent(new CustomEvent('edition:built'));
 	}
