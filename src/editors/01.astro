@@ -71,6 +71,15 @@ const payload = {
 	<div data-sheet-spacer></div>
 	<div class="ed-scan" aria-hidden="true"></div>
 	<HoloSticker />
+	<HoloSticker
+		section="masters-of-our-existence"
+		cut={`${import.meta.env.BASE_URL.replace(/\/?$/, '/')}stickers/dayebga-cut.png`}
+		ink={`${import.meta.env.BASE_URL.replace(/\/?$/, '/')}stickers/dayebga-ink.png`}
+		aspect={0.79}
+		height="clamp(180px, 34vh, 300px)"
+		rot={9}
+		label="Sticker for Dayebga's piece. Drag to peel it off and move it around this section."
+	/>
 	<script type="application/json" data-editor-data set:html={JSON.stringify(payload)} />
 </div>
 
@@ -221,6 +230,8 @@ const payload = {
 						if (a.marginNote) C.marginNote(s, T, a.marginNote);
 						else if (!a.chat && cut < 0 && s.rng.chance(0.6)) C.marginNote(s, T, s.rng.pick(MARGIN_NOTES));
 					}
+					// where this article's content ends (stickers use it to find the gap)
+					s.anchor(`end:${a.slug}`);
 					s.gap(s.vh * 0.12);
 				}
 
