@@ -212,6 +212,7 @@ const payload = {
 						C.fillerNote(s, T);
 					} else {
 						C.dek(s, T, a.dek);
+						s.anchor(`byline:${a.slug}`);
 						C.byline(s, T, `By ${a.byline}`);
 						if (a.heroUrl) C.figure(s, T, { url: a.heroUrl, caption: a.title });
 						const cut = a.blocks.findIndex((b: { type: string }) => b.type === 'more');

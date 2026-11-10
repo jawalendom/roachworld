@@ -481,14 +481,7 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 			// article's divider rule
 			return [Math.max(0, typeof prevEnd === 'number' ? prevEnd - 24 : marks[i].y - 40), marks[i + 1] ? marks[i + 1].y + LEAN : H];
 		};
-		// the empty space at the bottom of this article: after its Read more, before
-		// the next article's divider
-		const gapAfter = (): [number, number] | null => {
-			const marks = ((sheetEl as any)?.__editionMarks ?? []) as { id: string; y: number }[];
-			const i = marks.findIndex((m) => m.id === sectionId);
-			const end = (sheetEl as any)?.__editionAnchors?.[`end:${sectionId}`];
-			return typeof end === 'number' && marks[i + 1] ? [end, marks[i + 1].y] : null;
-		};
+
 		const keepOn = () => {
 			const host = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? { top: 0, left: 0 };
 			const r = el.getBoundingClientRect();
@@ -509,20 +502,13 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 				const [lo, hi] = bounds();
 				if (!Number.isFinite(hi)) return;
 				if (!el.hasAttribute('data-placed')) {
-					// phones: centred in the empty space at the bottom of the article
-					// (between its Read more and the next article's divider)
-					const gap = gapAfter();
-					if (matchMedia('(max-width: 640px)').matches && gap) {
-						// sized to the space: from under the button (the anchor sits ~30px
-						// below it) to the top of the divider rule (~50px under the mark)
-						const top = gap[0] - 18, bottom = gap[1] + 46;
-						const h = Math.max(110, Math.min(el.offsetHeight, (bottom - top) / 1.12));
-						el.style.setProperty('--h', `${Math.round(h)}px`);
-						// then nudged down so its bottom leans over the next divider rule
-						el.style.top = `${(top + bottom) / 2 - el.offsetHeight / 2 + (LEAN - 46)}px`;
-						el.style.left = '50%';
-						el.style.right = 'auto';
-						el.style.marginLeft = `${-el.offsetWidth / 2}px`;
+					// phones: on the right, beside the article's summary and byline
+					const by = (sheetEl as any)?.__editionAnchors?.[`byline:${sectionId}`];
+					if (matchMedia('(max-width: 640px)').matches && typeof by === 'number') {
+						el.style.setProperty('--h', '150px');
+						el.style.left = 'auto';
+						el.style.right = '2.6rem';
+						el.style.top = `${by + 14 - el.offsetHeight / 2}px`;
 					} else el.style.top = `${lo + Math.min(hi - lo, innerHeight) * 0.62}px`;
 					el.toggleAttribute('data-placed', true);
 				}
