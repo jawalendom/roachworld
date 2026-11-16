@@ -26,6 +26,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 				</button>
 				<div class="g-board">
 					<p class="g-k">High scores</p>
+					<p class="g-cols" aria-hidden="true"><span>#</span><span>Name</span><span>Device</span><span>Score</span></p>
 					<ol data-g-board></ol>
 					<p class="g-empty" data-g-empty>No scores yet. Be the first.</p>
 				</div>
@@ -312,6 +313,22 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		font-size: 0.6rem;
 		color: #ff2e4d;
 	}
+	.g-cols {
+		display: grid;
+		grid-template-columns: 2.2rem 1fr 4.4rem 2.6rem;
+		gap: 0.6rem;
+		margin: 0 0 0.2rem;
+		padding: 0 0.4rem;
+		font-size: 0.52rem;
+		color: #5f6068;
+		text-align: left;
+	}
+	.g-cols span:last-child {
+		text-align: right;
+	}
+	.g-board:has([data-g-empty]:not([hidden])) .g-cols {
+		display: none;
+	}
 	.g-board ol {
 		margin: 0;
 		padding: 0;
@@ -320,7 +337,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 	}
 	.g-board :global(li) {
 		display: grid;
-		grid-template-columns: 2.2rem 1fr auto;
+		grid-template-columns: 2.2rem 1fr 4.4rem 2.6rem;
 		gap: 0.6rem;
 		padding: 0.32rem 0.4rem;
 		color: #e6e6e9;
@@ -333,6 +350,13 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 	.g-board :global(li span:last-child) {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+	}
+	/* device tag */
+	.g-board :global(li span:nth-child(3)) {
+		font-size: 0.56rem;
+		letter-spacing: 0.12em;
+		color: #13e8ff;
+		align-self: center;
 	}
 	.g-board :global(li[data-you]) {
 		background: #00ff9c;
@@ -515,7 +539,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 
 <script>
 	import { mountAsciiRoaches, type AsciiRoaches } from '../lib/ascii/roaches';
-	import { getScores, qualifies, submitScore, type Score } from '../lib/ascii/leaderboard';
+	import { getScores, qualifies, submitScore, type Score, type Device } from '../lib/ascii/leaderboard';
 
 	const ROUND = 30; // seconds
 
@@ -524,7 +548,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 	function runGame(
 		game: HTMLElement,
 		art: AsciiRoaches,
-		ctl: { onSquash(fn: ((n: number) => void) | null): void },
+		ctl: { onSquash(fn: ((n: number, pointer: string) => void) | null): void },
 	) {
 		const host = game.closest<HTMLElement>('[data-ascii]')!;
 		const q = <T extends Element>(s: string) => game.querySelector<T>(s)!;
@@ -542,6 +566,11 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		const skip = q<HTMLButtonElement>('[data-g-skip]');
 		const sub = q<HTMLElement>('[data-g-sub]');
 		let score = 0, timer = 0;
+		// how the round was played: counted per squash, so a laptop with a touch
+		// screen is labelled by what was actually used
+		let taps = 0, clicks = 0;
+		const device = (): Device =>
+			taps || clicks ? (taps >= clicks ? 'mobile' : 'desktop') : matchMedia('(pointer: coarse)').matches ? 'mobile' : 'desktop';
 
 		const state = (s: 'attract' | 'count' | 'play' | 'over') => {
 			game.dataset.state = s;
@@ -553,7 +582,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 				...list.map((s, i) => {
 					const li = document.createElement('li');
 					if (i === you) li.dataset.you = '';
-					for (const t of [String(i + 1).padStart(2, '0'), s.name, pad(s.score)]) {
+					for (const t of [String(i + 1).padStart(2, '0'), s.name, s.device ? (s.device === 'mobile' ? 'MOBILE' : 'DESKTOP') : '—', pad(s.score)]) {
 						const sp = document.createElement('span');
 						sp.textContent = t;
 						li.append(sp);
@@ -575,6 +604,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 			art.reset();
 			art.setArmed(false);
 			score = 0;
+			taps = clicks = 0;
 			scoreEl.textContent = pad(0);
 			timeEl.textContent = ROUND.toFixed(1);
 			hud.removeAttribute('data-low');
@@ -594,7 +624,8 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		const play = () => {
 			state('play');
 			art.setArmed(true);
-			ctl.onSquash(() => {
+			ctl.onSquash((_, pointer) => {
+				pointer === 'touch' ? taps++ : clicks++;
 				score++;
 				scoreEl.textContent = pad(score);
 				hud.classList.remove('bump');
@@ -630,7 +661,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		playBtn.addEventListener('click', start);
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
-			const { board, place } = await submitScore(nameIn.value, score);
+			const { board, place } = await submitScore(nameIn.value, score, device());
 			attract(place, board);
 		});
 		skip.addEventListener('click', () => attract());
@@ -646,9 +677,9 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		const out = host.querySelector<HTMLOutputElement>('[data-ascii-out]')!;
 		const count = host.querySelector<HTMLElement>('[data-ascii-count]');
 		const game = host.querySelector<HTMLElement>('[data-game]');
-		let onRoundSquash: ((n: number) => void) | null = null;
-		const onSquash = (n: number) => {
-			onRoundSquash?.(n);
+		let onRoundSquash: ((n: number, pointer: string) => void) | null = null;
+		const onSquash = (n: number, pointer: string) => {
+			onRoundSquash?.(n, pointer);
 			if (!count) return;
 			count.textContent = String(n).padStart(3, '0');
 			const box = count.parentElement!;

@@ -2,9 +2,13 @@
 // is so a shared online board can replace these two functions without touching
 // the game.
 
+/** what the round was played on: a finger or a mouse/trackpad */
+export type Device = 'mobile' | 'desktop';
+
 export interface Score {
 	name: string;
 	score: number;
+	device?: Device;
 	at: number; // when, ms since epoch
 }
 
@@ -34,8 +38,8 @@ export async function qualifies(score: number): Promise<boolean> {
 }
 
 /** add a score; returns the new board and where this one landed (0-based, -1 if off it) */
-export async function submitScore(name: string, score: number): Promise<{ board: Score[]; place: number }> {
-	const entry: Score = { name: name.trim().slice(0, 12).toUpperCase() || '???', score, at: Date.now() };
+export async function submitScore(name: string, score: number, device?: Device): Promise<{ board: Score[]; place: number }> {
+	const entry: Score = { name: name.trim().slice(0, 12).toUpperCase() || '???', score, device, at: Date.now() };
 	const all = rank([...read(), entry]).slice(0, 50);
 	try {
 		localStorage.setItem(KEY, JSON.stringify(all));

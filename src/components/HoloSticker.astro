@@ -496,31 +496,43 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 				place();
 			}
 		};
-		// a section sticker starts just under its article's headline
+		// a section sticker starts beside its article's subtitle and byline. The
+		// sheet re-lays itself out whenever the window changes height (on phones
+		// that's every time the browser bar shows or hides), which moves the
+		// article — so the sticker is re-placed on every layout: put back in its
+		// spot if it hasn't been touched, or carried along with the article if it has.
+		let moved = false;
+		let anchorAt: number | null = null;
+		const sectionTop = () => {
+			const marks = ((sheetEl as any)?.__editionMarks ?? []) as { id: string; y: number }[];
+			return marks.find((m) => m.id === sectionId)?.y ?? null;
+		};
 		const settle = () => {
 			if (sectionId) {
 				const [lo, hi] = bounds();
 				if (!Number.isFinite(hi)) return;
-				if (!el.hasAttribute('data-placed')) {
+				const top = sectionTop();
+				if (moved && anchorAt != null && top != null) {
+					el.style.top = `${parseFloat(el.style.top || '0') + (top - anchorAt)}px`;
+				} else if (!moved) {
 					// phones: on the right, beside the article's summary and byline
 					const by = (sheetEl as any)?.__editionAnchors?.[`byline:${sectionId}`];
 					const dekY = (sheetEl as any)?.__editionAnchors?.[`dek:${sectionId}`];
 					if (matchMedia('(max-width: 640px)').matches && typeof by === 'number') {
-						el.style.setProperty('--h', '136px');
+						el.style.setProperty('--h', '128px');
 						el.style.left = 'auto';
 						el.style.right = '2.6rem';
-						// its top starts below the headline (the subtitle line), never up
-						// in the title: the title's glitch-in and the screen's curve both
-						// shift it a little, so leave it room
+						// its top starts below the headline — at the subtitle line, plus
+						// room for the turned corner — never up in the title
 						const centred = by + 14 - el.offsetHeight / 2;
-						el.style.top = `${typeof dekY === 'number' ? Math.max(centred, dekY + 10) : centred}px`;
+						el.style.top = `${typeof dekY === 'number' ? Math.max(centred, dekY + 18) : centred}px`;
 					} else el.style.top = `${lo + Math.min(hi - lo, innerHeight) * 0.62}px`;
-					el.toggleAttribute('data-placed', true);
 				}
+				anchorAt = top;
+				el.toggleAttribute('data-placed', true);
 			}
 			keepOn();
 		};
-		if ((sheetEl as any)?.__editionMarks) requestAnimationFrame(settle);
 		sheetEl?.addEventListener('edition:built', () => requestAnimationFrame(settle));
 
 		// light + tilt from where the pointer is over the sticker
@@ -814,6 +826,7 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 			if (!drag || e.pointerId !== drag.id) return;
 			drag = null;
 			twist = null;
+			moved = true;
 			cancelAnimationFrame(edgeRaf);
 			el.classList.remove('is-lifted', 'is-hover');
 			// pressed down and smoothed flat
@@ -833,7 +846,9 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 		el.addEventListener('dblclick', () => {
 			pos = { x: 0, y: 0 };
 			rot = ROT0;
+			moved = false;
 			place();
+			settle();
 		});
 	}
 </script>

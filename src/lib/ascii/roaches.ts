@@ -26,7 +26,7 @@ export interface AsciiRoaches {
 	reset(): void;
 }
 
-export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; count?: number; strip?: boolean; onSquash?: (n: number) => void } = {}): Promise<AsciiRoaches> {
+export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; count?: number; strip?: boolean; onSquash?: (n: number, pointer: string) => void } = {}): Promise<AsciiRoaches> {
 	await fontsReady();
 	const canvas = document.createElement('canvas');
 	canvas.setAttribute('aria-hidden', 'true');
@@ -124,7 +124,7 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 		if (!armed) return;
 		if (field.squash(x, y, e.pointerType === 'touch' ? 4 : 1.5, clock)) {
 			host.dataset.squashed = String(++squashed);
-			o.onSquash?.(squashed);
+			o.onSquash?.(squashed, e.pointerType);
 		}
 	};
 	// mouse/pen squash on press; a finger squashes on lift, and only if it didn't
