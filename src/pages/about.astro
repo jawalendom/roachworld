@@ -1,112 +1,59 @@
 ---
 import { Image } from 'astro:assets';
-import Layout from '../layouts/Layout.astro';
+import Edition from '../layouts/Edition.astro';
+import EditionPage from '../components/EditionPage.astro';
 import { SITE_TITLE, EDITOR } from '../consts';
 import portrait from '../assets/about-jordan.jpg';
 ---
 
-<Layout title="About" description={`About ${SITE_TITLE} and how it is made.`}>
-	<p class="kicker">About</p>
-	<h1>How this is set</h1>
-
-	<div class="prose">
+<Edition title="About" description={`About ${SITE_TITLE}, a digital zine by ${EDITOR}.`} current="about">
+	<EditionPage kicker="About" title={SITE_TITLE}>
 		<figure class="portrait">
-			<Image src={portrait} alt={`${EDITOR}, the editor`} width={1200} />
-			<figcaption>{EDITOR}, editor</figcaption>
+			<Image src={portrait} alt={EDITOR} width={1200} />
+			<figcaption>// {EDITOR} / 8theroach</figcaption>
 		</figure>
 		<p>
-			<strong>{SITE_TITLE}</strong> is a personal digital zine by {EDITOR}. Every issue
-			is written in Markdown and published as a static site.
+			<strong>{SITE_TITLE}</strong> is a digital zine created by me. It is a spot where I can
+			highlight friends, family, and collaborators. It is a landing page for my memories and an
+			exercise in artistic expression. It’s your window into my personal museum.
 		</p>
-
-		<h2>Reading an issue</h2>
-		<p>
-			An issue is one long page — every article in it, stacked, divided by a heavy rule
-			and a numbered masthead. A floating <em>Index</em> in the corner opens a full-screen
-			table of contents; pick a piece and it scrolls you there. The archive keeps the
-			back issues.
-		</p>
-		<h2>The typesetting</h2>
-		<p>
-			Each article also has its own page, and there it offers a second mode. The default
-			is plain semantic HTML. Switch to <em>magazine</em> and the same text is re-set onto
-			a <code>&lt;canvas&gt;</code> by{' '}
-			<a href="https://github.com/chenglou/pretext">pretext</a>, a text-measurement and
-			line-breaking library that does its own layout instead of relying on the browser.
-		</p>
-		<p>
-			That buys things the browser will not give you: a real multi-column flow that
-			paginates, body text that narrows around a drop cap and widens again past it,
-			pull-quotes and inset figures that text wraps around, and headlines fitted to
-			exactly the width of the page.{' '}<code>layoutNextLineRange</code>{' '}accepts a
-			different maximum width on every single line, which is the whole trick.
-		</p>
-
-		<h2>The look</h2>
-		<p>
-			Printed — on screen — in two spot inks, acid yellow and medium blue, over black on
-			newsprint. Each ink is drawn on its own layer and stamped back slightly out of
-			register, the way a Risograph misaligns its drums. There is a grain plate on top.
-			Photographs are reduced to a single ink.
-		</p>
-		<p>
-			Display type is <strong>Syne</strong>; body is <strong>Space Grotesk</strong>;
-			folios and labels are <strong>Space Mono</strong>.
-		</p>
-
-		<h2>Colours</h2>
-		<ul class="swatches">
-			<li style="--c:#F2EDE0">Newsprint · #F2EDE0</li>
-			<li style="--c:#FFEC4D">Acid yellow · #FFEC4D</li>
-			<li style="--c:#0E5AD6">Medium blue · #0E5AD6</li>
-			<li style="--c:#22201C">Black · #22201C</li>
-		</ul>
-	</div>
-</Layout>
+		<p>You may ask yourself, “Well, why the fuck should I care?”</p>
+		<p class="end">END</p>
+	</EditionPage>
+</Edition>
 
 <style>
-	h1 {
-		font-size: clamp(2.5rem, 9vw, 5rem);
-		margin-bottom: 2rem;
+	.portrait {
+		margin: 0 0 2.2rem;
 	}
-	.prose {
-		max-width: var(--measure);
-		font-size: 1.05rem;
-		line-height: 1.7;
+	.portrait :global(img) {
+		display: block;
+		width: 100%;
+		height: auto;
+		outline: 1px solid rgba(0, 255, 156, 0.5);
+		outline-offset: 6px;
 	}
-	.prose h2 {
-		margin-top: 2.2em;
-		color: var(--ink);
-		font-size: 1.4rem;
-		width: fit-content;
-		padding: 0.05em 0.15em;
-		background: linear-gradient(var(--pink), var(--pink)) 0 100% / 100% 0.4em no-repeat;
+	figcaption {
+		margin-top: 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: #ff2e4d;
 	}
-	.prose p {
+	p {
 		margin: 0 0 1.2em;
 	}
-	/* the editor's photo stays in colour (the site greys out prose images) */
-	.prose .portrait :global(img) {
-		filter: none;
+	strong {
+		font-family: var(--font-display);
+		font-weight: 800;
+		letter-spacing: 0.02em;
 	}
-	.swatches {
-		list-style: none;
-		padding: 0;
-		display: grid;
-		gap: 0.5rem;
+	.end {
+		margin-top: 2.4em;
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
-	}
-	.swatches li {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-	.swatches li::before {
-		content: '';
-		width: 2rem;
-		height: 2rem;
-		background: var(--c);
-		border: 2px solid var(--ink);
+		letter-spacing: 0.3em;
+		color: #00ff9c;
 	}
 </style>

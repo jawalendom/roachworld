@@ -504,11 +504,16 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 				if (!el.hasAttribute('data-placed')) {
 					// phones: on the right, beside the article's summary and byline
 					const by = (sheetEl as any)?.__editionAnchors?.[`byline:${sectionId}`];
+					const dekY = (sheetEl as any)?.__editionAnchors?.[`dek:${sectionId}`];
 					if (matchMedia('(max-width: 640px)').matches && typeof by === 'number') {
-						el.style.setProperty('--h', '150px');
+						el.style.setProperty('--h', '136px');
 						el.style.left = 'auto';
 						el.style.right = '2.6rem';
-						el.style.top = `${by + 14 - el.offsetHeight / 2}px`;
+						// its top starts below the headline (the subtitle line), never up
+						// in the title: the title's glitch-in and the screen's curve both
+						// shift it a little, so leave it room
+						const centred = by + 14 - el.offsetHeight / 2;
+						el.style.top = `${typeof dekY === 'number' ? Math.max(centred, dekY + 10) : centred}px`;
 					} else el.style.top = `${lo + Math.min(hi - lo, innerHeight) * 0.62}px`;
 					el.toggleAttribute('data-placed', true);
 				}

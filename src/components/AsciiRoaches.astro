@@ -16,7 +16,38 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 <div class:list={['ascii', { full, strip }]} data-ascii>
 	{full && heading && <p class="ascii-head">{heading}</p>}
 	{full && backHref && <a class="ascii-exit" href={backHref}>[ &lt;- {backLabel ?? 'back'} ]</a>}
-	{!strip && (
+	{full && (
+		<div class="game" data-game data-state="attract">
+			<div class="g-attract">
+				<p class="g-kick">&gt; arcade</p>
+				<h2 class="g-title g-title--prompt" data-g-sub>Squash as many roaches as you can in 30 seconds</h2>
+				<button type="button" class="g-play" data-g-play>
+					<span aria-hidden="true">▶</span> Press to play
+				</button>
+				<div class="g-board">
+					<p class="g-k">High scores</p>
+					<ol data-g-board></ol>
+					<p class="g-empty" data-g-empty>No scores yet. Be the first.</p>
+				</div>
+			</div>
+			<p class="g-count" data-g-count aria-live="assertive"></p>
+			<div class="g-hud" aria-live="off">
+				<span>Time <b data-g-time>30.0</b></span>
+				<span>Score <b data-g-score>000</b></span>
+			</div>
+			<form class="g-over" data-g-form>
+				<p class="g-title g-title--sm">Time!</p>
+				<p class="g-result">You squashed <b data-g-final>0</b></p>
+				<div class="g-entry" data-g-entry>
+					<label for="g-name">New high score. Enter your name</label>
+					<input id="g-name" data-g-name maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="YOUR NAME" />
+					<button type="submit" class="g-play">Save score</button>
+				</div>
+				<button type="button" class="g-play" data-g-skip>See the board</button>
+			</form>
+		</div>
+	)}
+	{!strip && !full && (
 		<p class="ascii-count" aria-live="polite">
 			<span>roaches squashed</span>
 			<b data-ascii-count>000</b>
@@ -157,6 +188,270 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 			font-size: 1.2rem;
 		}
 	}
+	/* ── the squash game: the arcade layer ─────────────────────────── */
+	.game {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		pointer-events: none;
+		font-family: var(--font-mono);
+		text-transform: uppercase;
+		letter-spacing: 0.14em;
+	}
+	.game > * {
+		display: none;
+	}
+	.game[data-state='attract'] .g-attract,
+	.game[data-state='count'] .g-count,
+	.game[data-state='play'] .g-hud,
+	.game[data-state='over'] .g-over {
+		display: grid;
+	}
+	.game[data-state='play'] .g-count {
+		display: grid; /* the GO! lingers a beat */
+	}
+	/* attract + game over: a dim card over the crawling roaches */
+	.g-attract,
+	.g-over {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		translate: -50% -50%;
+		width: min(26rem, calc(100% - 2rem));
+		max-height: calc(100% - 9rem);
+		overflow: auto;
+		justify-items: center;
+		gap: 0.9rem;
+		padding: 1.6rem 1.4rem 1.4rem;
+		background: rgba(5, 5, 6, 0.9);
+		border: 1px solid rgba(0, 255, 156, 0.55);
+		box-shadow: 0 0 0 4px rgba(5, 5, 6, 0.6), 0 24px 60px rgba(0, 0, 0, 0.6);
+		text-align: center;
+		pointer-events: auto;
+	}
+	.g-kick {
+		margin: 0;
+		font-size: 0.62rem;
+		color: #00ff9c;
+	}
+	.g-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: clamp(1.9rem, 7vw, 2.8rem);
+		line-height: 0.95;
+		letter-spacing: 0.01em;
+		color: #e6e6e9;
+		text-shadow: 0.05em 0 #ff2e4d, -0.05em 0 #13e8ff;
+	}
+	.g-title--prompt {
+		font-size: clamp(1.3rem, 5vw, 1.9rem);
+		line-height: 1.05;
+	}
+	.g-title--sm {
+		font-size: clamp(1.6rem, 6vw, 2.2rem);
+	}
+	.g-sub,
+	.g-result {
+		margin: 0;
+		font-size: 0.68rem;
+		line-height: 1.6;
+		color: #8a8a90;
+		text-transform: none;
+		letter-spacing: 0.06em;
+	}
+	.g-result b {
+		display: block;
+		margin-top: 0.3rem;
+		font-family: var(--font-display);
+		font-size: 3rem;
+		line-height: 1;
+		color: #ff2e4d;
+		text-shadow: -0.04em 0 #13e8ff;
+	}
+	.g-play {
+		min-height: 48px;
+		padding: 0.8rem 1.4rem;
+		border: 0;
+		background: #00ff9c;
+		color: #050506;
+		cursor: pointer;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		animation: g-blink 1.1s steps(1) infinite;
+	}
+	.g-play:hover,
+	.g-play:focus-visible {
+		outline: 2px solid #e6e6e9;
+		outline-offset: 3px;
+		animation: none;
+	}
+	@keyframes g-blink {
+		50% {
+			background: #e6e6e9;
+		}
+	}
+	[data-g-skip] {
+		background: none;
+		color: #8a8a90;
+		min-height: 40px;
+		font-size: 0.66rem;
+		animation: none;
+	}
+	.g-board {
+		width: 100%;
+		margin-top: 0.4rem;
+		border-top: 1px solid rgba(230, 230, 233, 0.12);
+		padding-top: 0.9rem;
+	}
+	.g-k {
+		margin: 0 0 0.5rem;
+		font-size: 0.6rem;
+		color: #ff2e4d;
+	}
+	.g-board ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-size: 0.72rem;
+	}
+	.g-board :global(li) {
+		display: grid;
+		grid-template-columns: 2.2rem 1fr auto;
+		gap: 0.6rem;
+		padding: 0.32rem 0.4rem;
+		color: #e6e6e9;
+		text-align: left;
+	}
+	.g-board :global(li span:first-child),
+	.g-board :global(li span:last-child) {
+		color: #8a8a90;
+	}
+	.g-board :global(li span:last-child) {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+	.g-board :global(li[data-you]) {
+		background: #00ff9c;
+		color: #050506;
+		animation: g-blink 0.9s steps(1) infinite;
+	}
+	.g-board :global(li[data-you] span) {
+		color: #050506 !important;
+	}
+	.g-empty {
+		margin: 0;
+		font-size: 0.66rem;
+		color: #5f6068;
+		text-transform: none;
+		letter-spacing: 0.06em;
+	}
+	.g-entry {
+		display: grid;
+		gap: 0.6rem;
+		width: 100%;
+		justify-items: center;
+	}
+	.g-entry label {
+		font-size: 0.62rem;
+		color: #00ff9c;
+	}
+	.g-entry input {
+		width: 100%;
+		max-width: 16rem;
+		padding: 0.7rem 0.8rem;
+		border: 1px solid #00ff9c;
+		background: #050506;
+		color: #e6e6e9;
+		font: inherit;
+		font-size: 1rem;
+		letter-spacing: 0.24em;
+		text-align: center;
+		text-transform: uppercase;
+	}
+	.g-entry input:focus {
+		outline: 2px solid #e6e6e9;
+		outline-offset: 2px;
+	}
+	/* 3 · 2 · 1 · GO */
+	.g-count {
+		position: absolute;
+		inset: 0;
+		place-items: center;
+		margin: 0;
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: clamp(6rem, 30vw, 14rem);
+		line-height: 1;
+		color: #e6e6e9;
+		text-shadow: 0.05em 0 #ff2e4d, -0.05em 0 #13e8ff;
+		pointer-events: none;
+	}
+	.g-count.tick {
+		animation: g-tick 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+	}
+	@keyframes g-tick {
+		0% { scale: 1.8; opacity: 0; }
+		25% { scale: 1; opacity: 1; }
+		85% { opacity: 1; }
+		100% { scale: 0.9; opacity: 0; }
+	}
+	/* the round's readout */
+	.g-hud {
+		position: absolute;
+		left: 50%;
+		top: clamp(5.4rem, 14vh, 7.5rem);
+		translate: -50% 0;
+		grid-auto-flow: column;
+		gap: 1.6rem;
+		padding: 0.6rem 1.1rem;
+		background: rgba(5, 5, 6, 0.85);
+		border: 1px solid rgba(0, 255, 156, 0.5);
+		font-size: 0.66rem;
+		color: #8a8a90;
+		white-space: nowrap;
+	}
+	.g-hud b {
+		margin-left: 0.5rem;
+		font-family: var(--font-display);
+		font-size: 1.6rem;
+		color: #e6e6e9;
+		font-variant-numeric: tabular-nums;
+	}
+	.g-hud [data-g-score] {
+		color: #ff2e4d;
+	}
+	.g-hud.bump [data-g-score] {
+		display: inline-block;
+		animation: bump 0.2s ease-out;
+	}
+	.g-hud[data-low] [data-g-time] {
+		color: #ff2e4d;
+		animation: g-blink-t 0.5s steps(1) infinite;
+	}
+	@keyframes g-blink-t {
+		50% { opacity: 0.3; }
+	}
+	/* while a round runs, the title steps aside (the size control stays) */
+	.full:is([data-game-state='count'], [data-game-state='play']) .ascii-head {
+		visibility: hidden;
+	}
+	@media (max-width: 640px) {
+		.g-hud {
+			top: auto;
+			bottom: 5.2rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.g-play,
+		.g-count.tick,
+		.g-board :global(li[data-you]) {
+			animation: none;
+		}
+	}
 	/* the control: a small panel like ascii-magic's style node */
 	.ascii-panel {
 		right: 1rem;
@@ -219,7 +514,129 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 </style>
 
 <script>
-	import { mountAsciiRoaches } from '../lib/ascii/roaches';
+	import { mountAsciiRoaches, type AsciiRoaches } from '../lib/ascii/roaches';
+	import { getScores, qualifies, submitScore, type Score } from '../lib/ascii/leaderboard';
+
+	const ROUND = 30; // seconds
+
+	// The squash game: attract screen + high scores → 3·2·1·GO → 30s round → name
+	// entry if it made the board → back to the board with your row lit
+	function runGame(
+		game: HTMLElement,
+		art: AsciiRoaches,
+		ctl: { onSquash(fn: ((n: number) => void) | null): void },
+	) {
+		const host = game.closest<HTMLElement>('[data-ascii]')!;
+		const q = <T extends Element>(s: string) => game.querySelector<T>(s)!;
+		const playBtn = q<HTMLButtonElement>('[data-g-play]');
+		const boardEl = q<HTMLOListElement>('[data-g-board]');
+		const emptyEl = q<HTMLElement>('[data-g-empty]');
+		const countEl = q<HTMLElement>('[data-g-count]');
+		const hud = q<HTMLElement>('.g-hud');
+		const timeEl = q<HTMLElement>('[data-g-time]');
+		const scoreEl = q<HTMLElement>('[data-g-score]');
+		const form = q<HTMLFormElement>('[data-g-form]');
+		const finalEl = q<HTMLElement>('[data-g-final]');
+		const entry = q<HTMLElement>('[data-g-entry]');
+		const nameIn = q<HTMLInputElement>('[data-g-name]');
+		const skip = q<HTMLButtonElement>('[data-g-skip]');
+		const sub = q<HTMLElement>('[data-g-sub]');
+		let score = 0, timer = 0;
+
+		const state = (s: 'attract' | 'count' | 'play' | 'over') => {
+			game.dataset.state = s;
+			host.dataset.gameState = s;
+		};
+		const pad = (n: number) => String(n).padStart(3, '0');
+		const drawBoard = (list: Score[], you = -1) => {
+			boardEl.replaceChildren(
+				...list.map((s, i) => {
+					const li = document.createElement('li');
+					if (i === you) li.dataset.you = '';
+					for (const t of [String(i + 1).padStart(2, '0'), s.name, pad(s.score)]) {
+						const sp = document.createElement('span');
+						sp.textContent = t;
+						li.append(sp);
+					}
+					return li;
+				}),
+			);
+			emptyEl.hidden = list.length > 0;
+		};
+
+		const attract = async (you = -1, list?: Score[]) => {
+			art.setArmed(false);
+			drawBoard(list ?? (await getScores()), you);
+			playBtn.lastChild!.textContent = you >= 0 || score > 0 ? ' Play again' : ' Press to play';
+			state('attract');
+		};
+
+		const start = () => {
+			art.reset();
+			art.setArmed(false);
+			score = 0;
+			scoreEl.textContent = pad(0);
+			timeEl.textContent = ROUND.toFixed(1);
+			hud.removeAttribute('data-low');
+			state('count');
+			const steps = ['3', '2', '1', 'GO!'];
+			steps.forEach((t, i) =>
+				window.setTimeout(() => {
+					countEl.textContent = t;
+					countEl.classList.remove('tick');
+					void countEl.offsetWidth;
+					countEl.classList.add('tick');
+					if (t === 'GO!') play();
+				}, i * 800),
+			);
+		};
+
+		const play = () => {
+			state('play');
+			art.setArmed(true);
+			ctl.onSquash(() => {
+				score++;
+				scoreEl.textContent = pad(score);
+				hud.classList.remove('bump');
+				void hud.offsetWidth;
+				hud.classList.add('bump');
+			});
+			const t0 = performance.now();
+			const tick = (now: number) => {
+				const left = Math.max(0, ROUND - (now - t0) / 1000);
+				timeEl.textContent = left.toFixed(1);
+				hud.toggleAttribute('data-low', left <= 5);
+				if (left > 0) timer = requestAnimationFrame(tick);
+				else over();
+			};
+			timer = requestAnimationFrame(tick);
+		};
+
+		const over = async () => {
+			cancelAnimationFrame(timer);
+			art.setArmed(false);
+			ctl.onSquash(null);
+			countEl.textContent = '';
+			finalEl.textContent = String(score);
+			const made = await qualifies(score);
+			entry.hidden = !made;
+			skip.textContent = made ? 'Skip' : 'See the board';
+			nameIn.value = '';
+			state('over');
+			if (made) nameIn.focus({ preventScroll: true });
+			else skip.focus({ preventScroll: true });
+		};
+
+		playBtn.addEventListener('click', start);
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const { board, place } = await submitScore(nameIn.value, score);
+			attract(place, board);
+		});
+		skip.addEventListener('click', () => attract());
+		sub.textContent = `Squash as many roaches as you can in ${ROUND} seconds`;
+		attract();
+	}
 	for (const host of document.querySelectorAll<HTMLElement>('[data-ascii]')) {
 		if (host.classList.contains('strip')) {
 			mountAsciiRoaches(host, { size: 11, strip: true });
@@ -227,8 +644,12 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 		}
 		const range = host.querySelector<HTMLInputElement>('[data-ascii-size]')!;
 		const out = host.querySelector<HTMLOutputElement>('[data-ascii-out]')!;
-		const count = host.querySelector<HTMLElement>('[data-ascii-count]')!;
+		const count = host.querySelector<HTMLElement>('[data-ascii-count]');
+		const game = host.querySelector<HTMLElement>('[data-game]');
+		let onRoundSquash: ((n: number) => void) | null = null;
 		const onSquash = (n: number) => {
+			onRoundSquash?.(n);
+			if (!count) return;
 			count.textContent = String(n).padStart(3, '0');
 			const box = count.parentElement!;
 			box.classList.remove('bump');
@@ -248,7 +669,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 				host.addEventListener(
 					'wheel',
 					(e) => {
-						if ((e.target as HTMLElement).closest('.ascii-panel')) return;
+						if ((e.target as HTMLElement).closest('.ascii-panel, .g-attract, .g-over')) return;
 						e.preventDefault();
 						acc = Math.max(6, Math.min(64, acc - e.deltaY * 0.04));
 						if (Math.round(acc) !== Number(range.value)) set(acc);
@@ -259,7 +680,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 				// phones: dragging up and down the screen moves the size slider
 				let lastY: number | null = null;
 				host.addEventListener('touchstart', (e) => {
-					if ((e.target as HTMLElement).closest('.ascii-panel, a')) return;
+					if ((e.target as HTMLElement).closest('.ascii-panel, a, .g-attract, .g-over')) return;
 					lastY = e.touches[0].clientY;
 				}, { passive: true });
 				host.addEventListener('touchmove', (e) => {
@@ -273,6 +694,7 @@ const { full = false, strip = false, heading, backHref, backLabel } = Astro.prop
 				}, { passive: false });
 				host.addEventListener('touchend', () => (lastY = null));
 			}
+			if (game) runGame(game, art, { onSquash: (fn) => (onRoundSquash = fn) });
 		});
 	}
 </script>

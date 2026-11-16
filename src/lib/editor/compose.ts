@@ -76,7 +76,7 @@ export function cover(
 		reveal: 60,
 		lead: s.vh * 0.4,
 		draw(ctx) {
-			mono(ctx, `▶ VOL_${d.no}`, x, 14, t.mono(14), t.accent, 4);
+			mono(ctx, `▶ ZINE_${d.no}`, x, 14, t.mono(14), t.accent, 4);
 		},
 	});
 
@@ -309,9 +309,18 @@ export function headlineSize(s: Sheet, t: Theme, titles: string[], floor = 24) {
 export function headline(s: Sheet, t: Theme, text: string, size?: number) {
 	const { x } = contentBox(s);
 	const w = headlineWidth(s);
-	const head = text.toUpperCase();
-	const px = size ?? headlineSize(s, t, [text]);
-	const b = layoutInk(head, t.display(px), w, px, x, 0);
+	const parts = text.toUpperCase().split('|');
+	const px = size ?? headlineSize(s, t, parts);
+	// `|` forces a line break: lay each part out on its own and stack them
+	const b = parts
+		.map((part) => layoutInk(part.trim(), t.display(px), w, px, x, 0))
+		.reduce((acc, nb) => ({
+			...acc,
+			lines: [...acc.lines, ...nb.lines.map((l) => ({ ...l, y: l.y + acc.height }))],
+			height: acc.height + nb.height,
+			width: Math.max(acc.width, nb.width),
+			totalChars: acc.totalChars + nb.totalChars,
+		}));
 	const y = s.cursor + 26;
 	// a headline always decodes in over at least HEADLINE_DECODE once it first
 	// shows, even if the sheet hands it over fully revealed (end-of-sheet
@@ -481,6 +490,29 @@ export function body(s: Sheet, t: Theme, blocks: Block[]) {
 				s.cursor = y + b.height + lh * 0.18;
 			}
 			s.cursor += lh * 0.4;
+			continue;
+		}
+		// verse: one ink line per source line, no gap between them
+		if (block.type === 'para' && block.lines) {
+			for (const line of block.lines) {
+				const b = layoutInk(line, t.body(px), w, lh, x, 0);
+				const y = s.cursor;
+				s.push({
+					y,
+					h: b.height,
+					reveal: s.vh * 0.36,
+					draw(ctx, p) {
+						drawInk(ctx, { ...b, lines: b.lines.map((l) => ({ ...l, y: l.y + px * 0.85 })) }, p, {
+							font: t.body(px),
+							color: t.ink,
+							split: 1.2,
+							splitColors: SPLIT,
+						});
+					},
+				});
+				s.cursor = y + b.height;
+			}
+			s.cursor += lh * 0.5;
 			continue;
 		}
 		// paragraph

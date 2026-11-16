@@ -37,7 +37,12 @@ const SCRAWLS = [
 ---
 
 <div class="edchrome" data-edchrome>
-	<nav class="edn" aria-label="Roachworld">
+	<button type="button" class="edn-menu" data-nav-toggle aria-expanded="false" aria-controls="edn-links" aria-label="Open menu">
+		<span class="edn-bar" aria-hidden="true"></span>
+		<span class="edn-bar" aria-hidden="true"></span>
+		<span class="edn-bar" aria-hidden="true"></span>
+	</button>
+	<nav class="edn" id="edn-links" aria-label="Roachworld" data-nav>
 		{
 			[
 				{ label: 'Latest', href: `${base}/`, key: 'latest' },
@@ -84,7 +89,7 @@ const SCRAWLS = [
 				<div class="edx-panel" data-index-panel hidden role="dialog" aria-label="Issue contents">
 					<div class="edx-inner">
 						<p class="edx-kick">
-							Vol {issue?.data.number} — {titleOf}
+							Zine {issue?.data.number} — {titleOf}
 						</p>
 
 						<ol class="edx-list">
@@ -139,6 +144,10 @@ const SCRAWLS = [
 		letter-spacing: 0.13em;
 		text-transform: uppercase;
 		mix-blend-mode: difference;
+	}
+	/* phones: the row collapses into a dropdown (see the 640px block) */
+	.edn-menu {
+		display: none;
 	}
 	.edn a {
 		position: relative;
@@ -292,6 +301,184 @@ const SCRAWLS = [
 	}
 
 
+	@media (max-width: 640px) {
+		/* the menu button: three bars, a full 44px target, morphs to an X */
+		.edn-menu {
+			position: fixed;
+			/* centred on the ROACHWORLD wordmark's line (top-left) */
+			top: calc(clamp(0.8rem, 3vw, 1.5rem) + 0.5rem - 22px + 2px);
+			right: clamp(0.35rem, 2vw, 1rem);
+			z-index: 62;
+			display: grid;
+			align-content: center;
+			justify-items: end;
+			gap: 3.5px;
+			width: 44px;
+			height: 44px;
+			padding: 0 10px;
+			background: none;
+			border: none;
+			cursor: pointer;
+			-webkit-tap-highlight-color: transparent;
+		}
+		.edn-bar {
+			display: block;
+			width: 22px;
+			height: 2px;
+			background: var(--ed-ink);
+			transition:
+				translate 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+				rotate 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+				opacity 0.18s,
+				width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+				background 0.2s;
+		}
+		/* a shorter middle bar in the accent: reads as ours, not a stock icon */
+		.edn-bar:nth-child(2) {
+			width: 15px;
+			background: var(--ed-yellow);
+		}
+		/* every 5 seconds the bars ripple like a voice meter — each swells and
+		   settles in turn, top to bottom, a wave rolling down through them in place */
+		.edn-bar {
+			transform-origin: right center;
+			animation: edn-wave 5s cubic-bezier(0.34, 1.56, 0.64, 1) 1.2s infinite;
+		}
+		.edn-bar:nth-child(2) {
+			animation-delay: 1.36s;
+		}
+		.edn-bar:nth-child(3) {
+			animation-delay: 1.52s;
+		}
+		/* one wave (~1.1s), then still: the cycle is 5s so it rolls every 5 seconds */
+		@keyframes edn-wave {
+			0%,
+			22%,
+			100% {
+				scale: 1 1;
+			}
+			4% {
+				scale: 0.45 1;
+			}
+			8.5% {
+				scale: 1.12 1.35;
+			}
+			12.5% {
+				scale: 0.9 1;
+			}
+			16% {
+				scale: 1 1;
+			}
+		}
+		/* open: the wave stops and the bars fold into the X */
+		.edn-menu[aria-expanded='true'] .edn-bar {
+			animation: none;
+			transform-origin: center;
+		}
+		.edn-menu[aria-expanded='true'] .edn-bar:nth-child(1) {
+			translate: 0 5.5px;
+			rotate: 45deg;
+		}
+		.edn-menu[aria-expanded='true'] .edn-bar:nth-child(2) {
+			opacity: 0;
+			width: 0;
+		}
+		.edn-menu[aria-expanded='true'] .edn-bar:nth-child(3) {
+			translate: 0 -5.5px;
+			rotate: -45deg;
+		}
+		.edn-menu:focus-visible {
+			outline: 1px solid var(--ed-yellow);
+			outline-offset: -4px;
+		}
+
+		/* the menu itself: the whole screen, big type, nothing else competing */
+		.edn {
+			inset: 0;
+			top: 0;
+			right: 0;
+			z-index: 61;
+			flex-direction: column;
+			justify-content: center;
+			gap: 0;
+			padding: 6rem clamp(1.5rem, 8vw, 2.5rem) 4rem;
+			background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px), #050506;
+			mix-blend-mode: normal;
+			visibility: hidden;
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.22s, visibility 0s 0.22s;
+		}
+		.edn[data-open] {
+			visibility: visible;
+			opacity: 1;
+			pointer-events: auto;
+			transition: opacity 0.22s;
+		}
+		.edn a {
+			display: flex;
+			align-items: baseline;
+			gap: 1rem;
+			padding: 1.1rem 0;
+			border-top: 1px solid rgba(230, 230, 233, 0.12);
+			font-family: var(--font-display);
+			font-weight: 800;
+			font-size: clamp(1.8rem, 9vw, 3rem);
+			letter-spacing: 0.01em;
+			line-height: 1;
+			color: var(--ed-ink);
+			text-shadow: 0.04em 0 #ff2e4d, -0.04em 0 #13e8ff;
+			/* rise in one after another */
+			opacity: 0;
+			translate: 0 0.8rem;
+			transition: opacity 0.3s, translate 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.15s;
+		}
+		.edn a:last-child {
+			border-bottom: 1px solid rgba(230, 230, 233, 0.12);
+		}
+		.edn[data-open] a {
+			opacity: 1;
+			translate: 0 0;
+		}
+		.edn[data-open] a:nth-child(2) {
+			transition-delay: 0.05s;
+		}
+		.edn[data-open] a:nth-child(3) {
+			transition-delay: 0.1s;
+		}
+		/* index numbers, like the contents */
+		.edn a::before {
+			content: counter(edn, decimal-leading-zero);
+			counter-increment: edn;
+			font-family: var(--font-mono);
+			font-weight: 400;
+			font-size: 0.7rem;
+			letter-spacing: 0.12em;
+			color: var(--ed-dim);
+			text-shadow: none;
+			min-width: 1.6rem;
+		}
+		.edn {
+			counter-reset: edn;
+		}
+		.edn a[aria-current='page'] {
+			color: var(--ed-yellow);
+		}
+		.edn a[aria-current='page']::before {
+			color: var(--ed-yellow);
+		}
+		.edn a:active {
+			color: var(--ed-yellow);
+		}
+		.edn .sq {
+			display: none;
+		}
+		/* while it's open the page underneath doesn't scroll */
+		:global(html[data-nav-open]),
+		:global(html[data-nav-open] body) {
+			overflow: hidden;
+		}
+	}
 	@media (max-width: 640px) {
 		/* phones: just the numbers, a slim column on the right edge */
 		.toc {
@@ -491,6 +678,14 @@ const SCRAWLS = [
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.edn,
+		.edn a,
+		.edn-bar {
+			transition: none !important;
+		}
+		.edn-bar {
+			animation: none !important;
+		}
 		.edx-panel {
 			animation: none;
 		}
@@ -508,6 +703,41 @@ const SCRAWLS = [
 
 <script>
 	function initEditionChrome(root: HTMLElement) {
+		// ── phones: the nav dropdown ──
+		const navBtn = root.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+		const nav = root.querySelector<HTMLElement>('[data-nav]');
+		if (navBtn && nav) {
+			const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('a'));
+			const setNav = (on: boolean) => {
+				nav.toggleAttribute('data-open', on);
+				navBtn.setAttribute('aria-expanded', String(on));
+				navBtn.setAttribute('aria-label', on ? 'Close menu' : 'Open menu');
+				document.documentElement.toggleAttribute('data-nav-open', on);
+				if (on) links[0]?.focus({ preventScroll: true });
+			};
+			navBtn.addEventListener('click', () => setNav(!nav.hasAttribute('data-open')));
+			// tapping the empty part of the panel closes it, as does Escape
+			nav.addEventListener('click', (e) => {
+				if (e.target === nav) setNav(false);
+			});
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && nav.hasAttribute('data-open')) {
+					setNav(false);
+					navBtn.focus();
+				}
+				// keep Tab inside the open menu
+				if (e.key === 'Tab' && nav.hasAttribute('data-open')) {
+					const stops: HTMLElement[] = [navBtn, ...links];
+					const i = stops.indexOf(document.activeElement as HTMLElement);
+					const next = e.shiftKey ? (i <= 0 ? stops.length - 1 : i - 1) : (i + 1) % stops.length;
+					e.preventDefault();
+					stops[next].focus();
+				}
+			});
+			// rotating to desktop width mid-menu shouldn't leave the page locked
+			matchMedia('(min-width: 641px)').addEventListener('change', (m) => m.matches && setNav(false));
+		}
+
 		const openBtn = root.querySelector<HTMLButtonElement>('[data-index-open]');
 		const panel = root.querySelector<HTMLElement>('[data-index-panel]');
 		const closeBtn = root.querySelector<HTMLButtonElement>('[data-index-close]');

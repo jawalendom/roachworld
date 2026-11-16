@@ -1,26 +1,22 @@
 ---
-interface Props {
-	editorHref: string;
-	plainHref: string;
-	current: 'editor' | 'plain';
-	hasEditor?: boolean;
-}
-const { editorHref, plainHref, current, hasEditor = true } = Astro.props;
+// The view switch, bottom-left on every page: Standard view (the zine as
+// designed) / Editor's view (the same pages digicrushed — pixelated,
+// posterised, torn, smeared, buried in roaches — barely usable on purpose).
+// The choice is kept per browser. The switch itself sits in the browser's top
+// layer, so the crush never touches it: there's always a clean way back.
 ---
 
-<nav class="edt" aria-label="Reading mode">
-	<a href={editorHref} aria-current={current === 'editor' ? 'true' : undefined} class:list={{ off: !hasEditor }}>
-		Editor's view
-	</a>
+<nav class="edt" aria-label="View" popover="manual" data-view-toggle>
+	<button type="button" data-view="standard">Standard view</button>
 	<span class="edt-sep">/</span>
-	<a href={plainHref} aria-current={current === 'plain' ? 'true' : undefined}>Plain view</a>
+	<button type="button" data-view="editor">Editor's view</button>
 </nav>
 
 <style>
 	.edt {
 		position: fixed;
-		left: clamp(0.8rem, 3vw, 1.5rem);
-		bottom: clamp(0.8rem, 3vw, 1.5rem);
+		inset: auto auto clamp(0.8rem, 3vw, 1.5rem) clamp(0.8rem, 3vw, 1.5rem);
+		margin: 0;
 		z-index: 60;
 		display: flex;
 		align-items: baseline;
@@ -33,28 +29,53 @@ const { editorHref, plainHref, current, hasEditor = true } = Astro.props;
 		color: #5f6068;
 		border: 1px solid #00ff9c;
 		padding: 0.55em 0.8em;
+		overflow: visible;
+		cursor: auto;
 	}
-	:global(html:not([data-edition])) .edt {
-		background: var(--paper);
-		border-color: var(--blue);
-	}
-	.edt a {
-		color: inherit;
-		text-decoration: none;
+	.edt button {
+		padding: 0;
 		border: none;
 		background: none;
+		cursor: pointer;
+		font: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
+		color: inherit;
 	}
-	.edt a[aria-current='true'] {
-		color: var(--blue);
+	.edt button:hover {
+		color: #e6e6e9;
 	}
-	:global(html[data-edition]) .edt a[aria-current='true'] {
+	.edt button[aria-pressed='true'] {
 		color: #00ff9c;
 	}
-	.edt a.off {
-		opacity: 0.4;
-		pointer-events: none;
+	.edt button[data-view='editor'][aria-pressed='true'] {
+		color: #ff2e4d;
+		text-shadow: 0.08em 0 #13e8ff;
 	}
 	.edt-sep {
 		opacity: 0.5;
 	}
 </style>
+
+<script>
+	const el = document.querySelector<HTMLElement>('[data-view-toggle]');
+	if (el) {
+		// top layer: drawn above (and outside) anything the crush filters
+		try {
+			el.showPopover();
+		} catch {}
+		const btns = el.querySelectorAll<HTMLButtonElement>('[data-view]');
+		const sync = () => {
+			const v = document.documentElement.hasAttribute('data-crush') ? 'editor' : 'standard';
+			btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+		};
+		sync();
+		btns.forEach((b) =>
+			b.addEventListener('click', () => {
+				window.dispatchEvent(new CustomEvent('roachworld:view', { detail: b.dataset.view }));
+				sync();
+			}),
+		);
+		window.addEventListener('roachworld:view-changed', sync);
+	}
+</script>

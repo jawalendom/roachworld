@@ -2,7 +2,6 @@
 import Edition from '../layouts/Edition.astro';
 import Layout from '../layouts/Layout.astro';
 import IssueScroll from '../components/IssueScroll.astro';
-import EditionToggle from '../components/EditionToggle.astro';
 import { getIssues } from '../lib/issues';
 import { editorFor } from '../lib/editors';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
@@ -12,15 +11,12 @@ const issues = await getIssues();
 const latest = issues[0];
 const older = issues.length - 1;
 const Editor = latest ? editorFor(latest.dir) : null;
-const editorHref = latest ? `${base}/issues/${latest.dir}/` : base;
-const plainHref = latest ? `${base}/issues/${latest.dir}/plain/` : base;
 ---
 
 {
 	latest && Editor ? (
 		<Edition title={SITE_TITLE} description={SITE_DESCRIPTION} issue={latest} current="latest">
 			<Editor issue={latest} />
-			<EditionToggle editorHref={editorHref} plainHref={plainHref} current="editor" />
 		</Edition>
 	) : (
 		<Layout title={SITE_TITLE} description={SITE_DESCRIPTION} wide>
@@ -38,12 +34,6 @@ const plainHref = latest ? `${base}/issues/${latest.dir}/plain/` : base;
 			) : (
 				<p>No issues yet.</p>
 			)}
-			<EditionToggle
-				editorHref={editorHref}
-				plainHref={plainHref}
-				current="plain"
-				hasEditor={!!Editor}
-			/>
 		</Layout>
 	)
 }

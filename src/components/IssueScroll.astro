@@ -6,7 +6,7 @@ import IssueIndex from './IssueIndex.astro';
 import Chat from './Chat.astro';
 import AsciiRoaches from './AsciiRoaches.astro';
 import ShelfDisc from './ShelfDisc.astro';
-import { parseBody } from '../lib/editor/parseBody';
+import { parseBody, previewBlocks } from '../lib/editor/parseBody';
 import { articleSlug, articleOrder, type Issue } from '../lib/issues';
 
 interface Props {
@@ -22,7 +22,11 @@ const articles = await Promise.all(
 		// `{/* read-more */}` in the body: show only what's above it here
 		const blocks = parseBody(a.body ?? '');
 		const cut = blocks.findIndex((b) => b.type === 'more');
-		const preview = cut >= 0 ? blocks.slice(0, cut) : null;
+		const preview = a.data.previewLines
+			? previewBlocks(blocks, a.data.previewLines).filter((b) => b.type !== 'more')
+			: cut >= 0
+				? blocks.slice(0, cut)
+				: null;
 		return { data: a.data, slug: articleSlug(a), order: articleOrder(a), Content, preview };
 	}),
 );

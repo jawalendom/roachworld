@@ -85,6 +85,8 @@ export interface RoachField {
 	cells(t: number): Uint8Array;
 	/** squash the roach under a point (reference cells); true if one died */
 	squash(x: number, y: number, slack: number, t: number): boolean;
+	/** sweep up the squashed ones */
+	clearDead(): void;
 }
 
 export function createRoachField(o: FieldOpts = {}): RoachField {
@@ -428,6 +430,9 @@ export function createRoachField(o: FieldOpts = {}): RoachField {
 				}
 			}
 			return cells;
+		},
+		clearDead() {
+			dead.length = 0;
 		},
 		squash(x, y, slack, t) {
 			let best = -1, bestD = Infinity;

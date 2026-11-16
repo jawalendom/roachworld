@@ -35,6 +35,10 @@ const articles = defineCollection({
 			// Optional line pulled onto the "Share to Story" card. Falls back to the
 			// article's first blockquote when omitted.
 			shareQuote: z.string().optional(),
+			// Show only this many lines on the issue page, then "read more" (for lyrics).
+			previewLines: z.number().int().positive().optional(),
+			// Headline used on phones in the Zine view; `|` forces a line break there.
+			mobileTitle: z.string().optional(),
 			// Optional hand-scrawled note in the editor view's margin for this piece.
 			marginNote: z.string().optional(),
 			// A text-message conversation, drawn as chat bubbles that arrive as you

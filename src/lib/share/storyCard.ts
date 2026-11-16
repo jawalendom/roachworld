@@ -225,7 +225,7 @@ export async function renderStoryCard(d: StoryCardData): Promise<Blob> {
 	ctx.fillStyle = BLUE;
 	(ctx as any).letterSpacing = '4px';
 	ctx.fillText(
-		`VOL ${d.issueNo} · ${d.kicker.toUpperCase()}`,
+		`ZINE ${d.issueNo} · ${d.kicker.toUpperCase()}`,
 		EDGE,
 		y,
 	);

@@ -3,7 +3,7 @@
 // article's heroImage only.
 
 export type Block =
-	| { type: 'para'; text: string }
+	| { type: 'para'; text: string; /** set when the source uses hard line breaks (lyrics, verse) */ lines?: string[] }
 	| { type: 'heading'; text: string }
 	| { type: 'pull'; text: string; cite?: string }
 	| { type: 'list'; items: string[] }
@@ -70,7 +70,28 @@ export function parseBody(src: string): Block[] {
 			blocks.push({ type: 'list', items: items.map(stripInline) });
 			continue;
 		}
+		// a trailing `\` is a Markdown hard break — keep those lines apart
+		if (/\\\n/.test(chunk)) {
+			const lines = chunk.split(/\\\n/).map((l) => stripInline(l.replace(/\\$/, '')));
+			blocks.push({ type: 'para', text: lines.join(' '), lines });
+			continue;
+		}
 		blocks.push({ type: 'para', text: stripInline(chunk) });
 	}
 	return blocks;
+}
+
+/** First `n` lines of the body (lyrics previews), ending in a read-more marker. */
+export function previewBlocks(blocks: Block[], n: number): Block[] {
+	const out: Block[] = [];
+	let left = n;
+	for (const b of blocks) {
+		if (left <= 0 || b.type !== 'para') break;
+		const lines = b.lines ?? [b.text];
+		const kept = lines.slice(0, left);
+		out.push({ type: 'para', text: kept.join(' '), lines: kept });
+		left -= kept.length;
+	}
+	out.push({ type: 'more' });
+	return out;
 }

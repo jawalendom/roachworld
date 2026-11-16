@@ -20,6 +20,10 @@ import { createRoachField, RAMP, INKS, BG, REF } from './field';
 
 export interface AsciiRoaches {
 	setSize(px: number): void;
+	/** whether taps squash (the game turns this off between rounds) */
+	setArmed(on: boolean): void;
+	/** a fresh floor: the dead swept up, the count back to zero */
+	reset(): void;
 }
 
 export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; count?: number; strip?: boolean; onSquash?: (n: number) => void } = {}): Promise<AsciiRoaches> {
@@ -111,11 +115,13 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 	// squash: tap/click a roach. Nearby ones bolt.
 	canvas.style.cursor = 'crosshair';
 	let squashed = 0;
+	let armed = true;
 	const squashAt = (e: PointerEvent) => {
 		const box = canvas.getBoundingClientRect();
 		const x = ((e.clientX - box.left) / box.width) * refCols;
 		const y = ((e.clientY - box.top) / box.height) * refRows;
 		// generous on touch: a fingertip is big next to a small roach
+		if (!armed) return;
 		if (field.squash(x, y, e.pointerType === 'touch' ? 4 : 1.5, clock)) {
 			host.dataset.squashed = String(++squashed);
 			o.onSquash?.(squashed);
@@ -162,6 +168,15 @@ export async function mountAsciiRoaches(host: HTMLElement, o: { size?: number; c
 		setSize(px: number) {
 			size = px;
 			measure();
+		},
+		setArmed(on: boolean) {
+			armed = on;
+			canvas.style.cursor = on ? 'crosshair' : '';
+		},
+		reset() {
+			field.clearDead();
+			squashed = 0;
+			host.dataset.squashed = '0';
 		},
 	};
 }

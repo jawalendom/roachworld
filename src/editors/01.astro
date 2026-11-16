@@ -1,12 +1,12 @@
 ---
-// Editor's view — Vol 1, "Roachworld".
+// Standard view — Zine 1, "Roachworld".
 // Art direction: near-black terminal ground, cold white, acid green + glitch
 // red. Machine-drawn — straight rules, registration brackets, RGB channel
 // split, decode-style reveals, scanlines. Seeded off the issue title.
 import { getImage } from 'astro:assets';
 import type { Issue } from '../lib/issues';
 import { articleOrder, articleSlug } from '../lib/issues';
-import { parseBody } from '../lib/editor/parseBody';
+import { parseBody, previewBlocks } from '../lib/editor/parseBody';
 import HoloSticker from '../components/HoloSticker.astro';
 
 interface Props {
@@ -24,12 +24,15 @@ const articles = await Promise.all(
 			slug: articleSlug(a),
 			kicker: a.data.kicker,
 			title: a.data.title,
+			mobileTitle: a.data.mobileTitle ?? null,
 			dek: a.data.dek,
 			asciiRoaches: a.data.asciiRoaches,
 			hasShelf: !!a.data.cds,
 			byline: a.data.byline,
 			heroUrl: hero?.src ?? null,
-			blocks: parseBody(a.body ?? ''),
+			blocks: a.data.previewLines
+				? previewBlocks(parseBody(a.body ?? ''), a.data.previewLines)
+				: parseBody(a.body ?? ''),
 			filler: a.data.filler,
 			marginNote: a.data.marginNote ?? null,
 			chatWith: a.data.chatWith ?? null,
@@ -60,7 +63,8 @@ const payload = {
 	no: issue.data.number,
 	title: issue.data.title,
 	blurb: issue.data.blurb ?? '',
-	date: issue.data.date.toLocaleDateString('en-us', { year: 'numeric', month: 'short', day: 'numeric' }),
+	// the cover gives the month and year only, e.g. SEP 2026
+	date: issue.data.date.toLocaleDateString('en-us', { year: 'numeric', month: 'short', timeZone: 'UTC' }),
 	seed: `roachworld-${issue.data.number}-${issue.data.title}`,
 	articles,
 };
@@ -199,18 +203,28 @@ const payload = {
 					})),
 				);
 
+				// phones get the article's mobileTitle (with `|` line breaks) when it has one
+				const shownTitle = (a: { title: string; mobileTitle?: string | null }) =>
+					s.W < 620 && a.mobileTitle ? a.mobileTitle : a.title;
+				// shared headline size, from every title as before — except that on
+				// phones a title with a hand-placed break (mobileTitle) doesn't vote
 				const headPx = C.headlineSize(
 					s,
 					T,
-					data.articles.map((a: { title: string }) => a.title),
+					data.articles
+						.filter((a: { mobileTitle?: string | null }) => !(s.W < 620 && a.mobileTitle))
+						.map((a: { title: string }) => a.title),
 				);
 				for (const a of data.articles) {
 					s.mark(a.slug);
 					C.divider(s, T, { order: a.order, kicker: a.filler ? 'Filler' : a.kicker });
-					C.headline(s, T, a.title, headPx);
+					C.headline(s, T, shownTitle(a), headPx);
 					if (a.filler) {
+						// a placeholder still shows its subtitle once it has a real one
+						if (a.dek && !a.dek.startsWith('[')) C.dek(s, T, a.dek);
 						C.fillerNote(s, T);
 					} else {
+						s.anchor(`dek:${a.slug}`);
 						C.dek(s, T, a.dek);
 						s.anchor(`byline:${a.slug}`);
 						C.byline(s, T, `By ${a.byline}`);

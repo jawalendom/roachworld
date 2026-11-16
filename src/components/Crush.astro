@@ -1,0 +1,232 @@
+---
+// Editor's view: every page digicrushed. An SVG filter chain smears the picture
+// with animated noise displacement, drops it to chunky pixels, crushes the
+// colour to a few levels and splits the channels; a canvas on top adds torn
+// bands, static and blown-out flashes. The cursor stays normal so the view
+// switch is always easy to hit (Escape leaves too). And roach
+// logos pile up — a new one every 5ms, growing as they go — until they've
+// buried the whole screen. They're only lightly crushed (drawn at half the
+// resolution and blown up), so they read clearly against the wreckage.
+//
+// The filter is applied element by element (canvases and the page's text
+// furniture) rather than to the whole document — a filter on the full scroll
+// height would be enormous, and on a fixed element's ancestor it would break
+// that element's positioning.
+---
+
+<svg class="crush-defs" aria-hidden="true" width="0" height="0">
+	<filter id="rw-crush" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+		<feTurbulence data-crush-noise type="fractalNoise" baseFrequency="0.004 0.09" numOctaves="2" seed="3" result="n" />
+		<feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G" result="smear" />
+		<!-- chunky pixels: sample one dot per block, then grow it to fill the block -->
+		<feFlood x="3" y="3" width="1" height="1" flood-color="#fff" />
+		<feComposite width="7" height="7" />
+		<feTile result="grid" />
+		<feComposite in="smear" in2="grid" operator="in" />
+		<feMorphology operator="dilate" radius="3" result="px" />
+		<!-- crushed colour: three levels per channel -->
+		<feComponentTransfer in="px" result="crushed">
+			<feFuncR type="discrete" tableValues="0 0.55 1" />
+			<feFuncG type="discrete" tableValues="0 0.6 1" />
+			<feFuncB type="discrete" tableValues="0 0.5 1" />
+		</feComponentTransfer>
+		<!-- channel split -->
+		<feColorMatrix in="crushed" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+		<feOffset in="r" dx="-6" dy="1" result="r2" />
+		<feColorMatrix in="crushed" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb" />
+		<feOffset in="gb" dx="5" dy="-1" result="gb2" />
+		<feBlend in="r2" in2="gb2" mode="screen" />
+	</filter>
+</svg>
+<canvas class="crush-roaches" data-crush-roaches aria-hidden="true"></canvas>
+<canvas class="crush-fx" data-crush-fx aria-hidden="true"></canvas>
+
+<style>
+	.crush-defs {
+		position: absolute;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+	}
+	.crush-fx,
+	.crush-roaches {
+		display: none;
+	}
+	/* the swarm of logos: low-res and scaled up, so only a little crushed */
+	:global(html[data-crush]) .crush-roaches {
+		display: block;
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: 79;
+		pointer-events: none;
+		image-rendering: pixelated;
+	}
+	:global(html[data-crush]) .crush-fx {
+		display: block;
+		position: fixed;
+		inset: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: 80;
+		pointer-events: none;
+		mix-blend-mode: screen;
+	}
+	/* the things that get crushed */
+	:global(
+			html[data-crush] canvas:not(.crush-fx):not(.crush-roaches),
+			html[data-crush] img,
+			html[data-crush] .edchrome > *,
+			html[data-crush] .edition-home,
+			html[data-crush] .edp,
+			html[data-crush] .holo,
+			html[data-crush] .holo-note,
+			html[data-crush] [data-shelf] > :not(canvas),
+			html[data-crush] [data-ascii] > :not(canvas)
+		) {
+		filter: url(#rw-crush) contrast(1.35) saturate(1.6);
+	}
+	:global(html[data-crush] .edp img) {
+		filter: none; /* its parent is already crushed */
+	}
+	/* everything shudders */
+	@media (prefers-reduced-motion: no-preference) {
+		:global(
+				html[data-crush] [data-sheet] + canvas,
+				html[data-crush] .edp,
+				html[data-crush] .edchrome > *,
+				html[data-crush] .edition-home
+			) {
+			animation: crush-shake 0.23s steps(2) infinite;
+		}
+	}
+	@keyframes crush-shake {
+		0% { translate: 0 0; }
+		25% { translate: -3px 1px; }
+		50% { translate: 2px -2px; }
+		75% { translate: -1px 3px; }
+		100% { translate: 3px 0; }
+	}
+</style>
+
+<script>
+	import { drawRoach } from '../lib/brand/roach';
+	const KEY = 'roachworld:view';
+	const root = document.documentElement;
+	const fx = document.querySelector<HTMLCanvasElement>('[data-crush-fx]')!;
+	const rc = document.querySelector<HTMLCanvasElement>('[data-crush-roaches]')!;
+	const rg = rc.getContext('2d')!;
+	const noise = document.querySelector<SVGFETurbulenceElement>('[data-crush-noise]')!;
+	const g = fx.getContext('2d')!;
+	const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	let raf = 0;
+
+
+	const R = (a: number, b: number) => a + Math.random() * (b - a);
+
+	// ── the pile of roaches ──
+	const LOW = 2; // drawn at half resolution
+	const INKS = ['#00ff9c', '#e6e6e9', '#ff2e4d', '#13e8ff', '#ffc93c'];
+	let count = 0, last = 0, owed = 0;
+	const resetPile = () => {
+		rc.width = Math.ceil(innerWidth / LOW);
+		rc.height = Math.ceil(innerHeight / LOW);
+		rg.imageSmoothingEnabled = false;
+		count = 0;
+		owed = 0;
+		last = performance.now();
+	};
+	addEventListener('resize', () => root.hasAttribute('data-crush') && resetPile());
+	function oneRoach() {
+		const W = rc.width, H = rc.height;
+		// they start small and get bigger the more there are
+		const grow = Math.min(1, count / 1400);
+		const h = R(34, 60) + grow * R(30, 110);
+		const x = R(-h * 0.2, W), y = R(-h * 0.5, H);
+		const ink = INKS[Math.floor(Math.random() * INKS.length)];
+		rg.save();
+		rg.translate(x, y);
+		rg.rotate(R(-Math.PI, Math.PI));
+		// a dark drop so each one reads against the pile, then a little red / cyan
+		// misregistration
+		drawRoach(rg, -h * 0.12 + 2, -h / 2 + 2, h, '#050506', undefined, 'solid');
+		rg.globalAlpha = 0.7;
+		drawRoach(rg, -h * 0.12 - 1, -h / 2, h, '#ff2e4d', undefined, 'solid');
+		drawRoach(rg, -h * 0.12 + 1, -h / 2, h, '#13e8ff', undefined, 'solid');
+		rg.globalAlpha = 1;
+		drawRoach(rg, -h * 0.12, -h / 2, h, ink, undefined, 'solid');
+		rg.restore();
+		count++;
+	}
+	function pile(now: number) {
+		// one every 5ms (several per frame), capped so a background tab coming
+		// back doesn't stall on a backlog
+		owed = Math.min(owed + (now - last) / 5, 60);
+		last = now;
+		while (owed >= 1) {
+			oneRoach();
+			owed--;
+		}
+	}
+
+	let t = 0;
+	function frame(now = performance.now()) {
+		raf = requestAnimationFrame(frame);
+		t++;
+		if (!reduce) pile(now);
+
+		// re-roll the smear every few frames
+		if (t % 4 === 0 && !reduce) {
+			noise.setAttribute('seed', String(Math.floor(R(1, 999))));
+			noise.setAttribute('baseFrequency', `${R(0.002, 0.008).toFixed(4)} ${R(0.04, 0.16).toFixed(3)}`);
+		}
+
+		// overlay: torn bands, static, flashes
+		const w = (fx.width = innerWidth), h = (fx.height = innerHeight);
+		g.clearRect(0, 0, w, h);
+		const bands = Math.floor(R(2, 9));
+		for (let i = 0; i < bands; i++) {
+			const y = R(0, h), bh = R(2, 40);
+			g.fillStyle = ['#ff2e4d', '#13e8ff', '#00ff9c', '#e6e6e9'][i % 4];
+			g.globalAlpha = R(0.08, 0.4);
+			g.fillRect(R(-40, w * 0.3), y, R(w * 0.3, w * 1.2), bh);
+		}
+		g.globalAlpha = 0.18;
+		g.fillStyle = '#fff';
+		for (let i = 0; i < 900; i++) g.fillRect(R(0, w), R(0, h), 2, 2);
+		if (Math.random() < 0.03) {
+			g.globalAlpha = R(0.15, 0.45);
+			g.fillStyle = Math.random() < 0.5 ? '#ff2e4d' : '#00ff9c';
+			g.fillRect(0, 0, w, h);
+		}
+		g.globalAlpha = 1;
+	}
+
+	// Escape also gets you out
+	const leave = () => window.dispatchEvent(new CustomEvent('roachworld:view', { detail: 'standard' }));
+	addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && root.hasAttribute('data-crush')) leave();
+	});
+	function apply(on: boolean) {
+		root.toggleAttribute('data-crush', on);
+		cancelAnimationFrame(raf);
+		if (on) {
+			resetPile();
+			frame();
+		}
+		window.dispatchEvent(new Event('roachworld:view-changed'));
+	}
+	let saved: string | null = null;
+	try {
+		saved = localStorage.getItem(KEY);
+	} catch {}
+	apply(saved === 'editor');
+	addEventListener('roachworld:view', (e) => {
+		const v = (e as CustomEvent<string>).detail;
+		try {
+			localStorage.setItem(KEY, v);
+		} catch {}
+		apply(v === 'editor');
+	});
+</script>
