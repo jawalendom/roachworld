@@ -255,7 +255,14 @@ const SCRAWLS = [
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	.toc-list a:is(:hover, :focus-visible) {
+	/* hover only where there's a real pointer: a phone keeps the last-tapped
+	   link "hovered", which lit a second number next to the current one */
+	@media (hover: hover) {
+		.toc-list a:hover {
+			color: var(--ed-ink);
+		}
+	}
+	.toc-list a:focus-visible {
 		color: var(--ed-ink);
 	}
 	.toc-list a[aria-current='true'] {
@@ -813,6 +820,7 @@ const SCRAWLS = [
 		tocLinks.forEach((a) =>
 			a.addEventListener('click', (e) => {
 				e.preventDefault();
+				a.blur();
 				go(a.dataset.tocJump!);
 			}),
 		);
