@@ -526,7 +526,28 @@ const vars = [`--cut: ${cutUrl}`, `--ink: ${inkUrl}`, `--aspect: ${aspect}`, p.h
 						// room for the turned corner — never up in the title
 						const centred = by + 14 - el.offsetHeight / 2;
 						el.style.top = `${typeof dekY === 'number' ? Math.max(centred, dekY + 18) : centred}px`;
-					} else el.style.top = `${lo + Math.min(hi - lo, innerHeight) * 0.62}px`;
+					} else {
+						// wider screens: centred in the empty strip between the text
+						// column and the contents column, starting just under the
+						// headline so it never covers the title
+						const A = (sheetEl as any)?.__editionAnchors ?? {};
+						const textRight = A[`textRight:${sectionId}`];
+						const host = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? { left: 0 };
+						const sheetLeft = sheetEl?.getBoundingClientRect().left ?? 0;
+						const tocEl = document.querySelector<HTMLElement>('[data-toc]');
+						const tocLeft = tocEl ? tocEl.getBoundingClientRect().left : innerWidth;
+						const from = typeof textRight === 'number' ? sheetLeft + textRight : NaN;
+						const w = el.offsetWidth;
+						if (typeof dekY === 'number' && tocLeft - from > w * 1.1) {
+							el.style.right = 'auto';
+							el.style.left = `${(from + tocLeft) / 2 - w / 2 - host.left}px`;
+							el.style.top = `${dekY + 6}px`;
+						} else {
+							el.style.removeProperty('left');
+							el.style.removeProperty('right');
+							el.style.top = `${lo + Math.min(hi - lo, innerHeight) * 0.62}px`;
+						}
+					}
 				}
 				anchorAt = top;
 				el.toggleAttribute('data-placed', true);

@@ -37,6 +37,7 @@ const SCRAWLS = [
 ---
 
 <div class="edchrome" data-edchrome>
+	<div class="toc-veil" data-toc-veil aria-hidden="true"></div>
 	<button type="button" class="edn-menu" data-nav-toggle aria-expanded="false" aria-controls="edn-links" aria-label="Open menu">
 		<span class="edn-bar" aria-hidden="true"></span>
 		<span class="edn-bar" aria-hidden="true"></span>
@@ -202,6 +203,31 @@ const SCRAWLS = [
 		transition:
 			opacity 0.3s cubic-bezier(0.215, 0.61, 0.355, 1),
 			translate 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	/* the whole right-hand side frosts over once the contents are up, so the
+	   nav and the contents read as one column */
+	.toc-veil {
+		position: fixed;
+		z-index: 59;
+		top: 0;
+		bottom: 0;
+		right: 0;
+		width: var(--veil-w, 18rem);
+		background: rgba(5, 5, 6, 0.25);
+		-webkit-backdrop-filter: blur(14px);
+		backdrop-filter: blur(14px);
+		/* feathered on the inner edge, no hard line */
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 3.5rem);
+		mask-image: linear-gradient(to right, transparent, #000 3.5rem);
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+	}
+	.toc-veil[data-shown] {
+		opacity: 1;
+	}
+	:global(html[data-crush]) .toc-veil {
+		display: none;
 	}
 	.toc[data-shown] {
 		opacity: 1;
@@ -487,6 +513,9 @@ const SCRAWLS = [
 		}
 	}
 	@media (max-width: 640px) {
+		.toc-veil {
+			display: none;
+		}
 		/* phones: just the numbers, a slim column on the right edge */
 		.toc {
 			width: auto;
@@ -835,6 +864,28 @@ const SCRAWLS = [
 			if (a) marker.style.top = `${a.offsetTop + a.offsetHeight / 2 - 3}px`;
 		};
 
+		// wider screens: the column hangs off the nav above it, its left edge
+		// under LATEST and its right edge under ABOUT
+		const topNav = root.querySelector<HTMLElement>('[data-nav]');
+		const veil = root.querySelector<HTMLElement>('[data-toc-veil]');
+		const align = () => {
+			if (!toc || !topNav) return;
+			if (narrow.matches) {
+				toc.style.removeProperty('right');
+				toc.style.removeProperty('width');
+				return;
+			}
+			const r = topNav.getBoundingClientRect();
+			if (!r.width) return;
+			toc.style.right = `${document.documentElement.clientWidth - r.right}px`;
+			toc.style.width = `${r.width}px`;
+			// the blurred strip runs from a little left of the column to the edge
+			veil?.style.setProperty('--veil-w', `${document.documentElement.clientWidth - r.left + 56}px`);
+		};
+		align();
+		addEventListener('resize', align);
+		document.fonts?.ready.then(align);
+
 		// ── scroll-spy against the sheet's registered marks ──
 		if (!sheet) return;
 		const total = jumps.length;
@@ -849,6 +900,7 @@ const SCRAWLS = [
 			// on the cover (before the first article) nothing is lit
 			const onCover = sy < marks[0].y;
 			toc?.toggleAttribute('data-shown', !onCover);
+			root.querySelector('[data-toc-veil]')?.toggleAttribute('data-shown', !onCover);
 			const key = onCover ? '' : active;
 			if (key === currentId) return;
 			currentId = key;
